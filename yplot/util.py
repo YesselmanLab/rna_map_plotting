@@ -93,6 +93,34 @@ def draw_box_around_subplot(
     )
     fig.patches.append(bbox)
 
+def draw_box_around_figure(fig, linewidth=2, edgecolor="black", facecolor="none"):
+    """
+    Draw a box around the bounds of the entire figure.
+
+    Parameters
+    ----------
+    fig : matplotlib.figure.Figure
+        The figure to draw the bounding box on.
+    linewidth : float, optional
+        Line width of the bounding box (default: 2)
+    edgecolor : str, optional
+        Color of the bounding box edge (default: "black")
+    facecolor : str, optional
+        Color to fill the box with (default: "none", i.e., transparent)
+    """
+    # The full figure in figure coordinates is (0, 0, 1, 1)
+    bbox = patches.Rectangle(
+        (0, 0),
+        1,
+        1,
+        linewidth=linewidth,
+        edgecolor=edgecolor,
+        facecolor=facecolor,
+        transform=fig.transFigure,
+        zorder=100
+    )
+    fig.patches.append(bbox)
+
 
 def draw_boxes_around_coords_list(fig, coords_list):
     """
