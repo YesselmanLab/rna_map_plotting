@@ -230,3 +230,195 @@ def create_custom_layout(fig_size, layout, subplot_size, spacing):
         "subplot_size": list(subplot_size),
         "spacing": spacing,
     }
+
+
+def render_example_figure(coords, fig_size_inches, grid_layout=None, section_info=None):
+    """
+    Render an example figure with subplot coordinates.
+    
+    This function creates a matplotlib figure with the given coordinates but does not save it.
+    Use this when you want to display the figure or save it manually.
+    
+    Parameters:
+    -----------
+    coords : list
+        List of (left, bottom, width, height) coordinate tuples
+    fig_size_inches : tuple
+        Figure size as (width, height) in inches
+    grid_layout : tuple, optional
+        Grid layout as (rows, cols) for display purposes
+    section_info : dict, optional
+        Additional information about sections or subplot groupings
+    
+    Returns:
+    --------
+    matplotlib.figure.Figure
+        The rendered figure object
+    
+    Examples:
+    ---------
+    # Render a figure
+    coords = calculate_subplot_coordinates(...)
+    fig = render_example_figure(coords, (7, 5))
+    
+    # Display the figure
+    plt.show()
+    
+    # Or save it manually
+    fig.savefig('my_figure.png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    """
+    fig = plt.figure(figsize=fig_size_inches, dpi=100)
+    
+    # Color palette for different subplot sizes or sections
+    colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc', '#ffccff', '#ccffff', '#ffdddd', '#ddffdd']
+    
+    for idx, (left, bottom, width, height) in enumerate(coords):
+        ax = fig.add_axes([left, bottom, width, height])
+        
+        # Set background color based on section or index
+        if section_info and 'section' in section_info:
+            color_idx = section_info['section'] % len(colors)
+        else:
+            color_idx = idx % len(colors)
+        
+        ax.set_facecolor(colors[color_idx])
+        
+        # Add text showing subplot info
+        if grid_layout:
+            rows, cols = grid_layout
+            row = idx // cols
+            col = idx % cols
+            ax.text(0.5, 0.5, f'R{row}C{col}\n{idx}', 
+                    ha='center', va='center', fontsize=10, fontweight='bold')
+        else:
+            ax.text(0.5, 0.5, f'Subplot {idx}', 
+                    ha='center', va='center', fontsize=10, fontweight='bold')
+        
+        # Add a subtle border
+        for spine in ax.spines.values():
+            spine.set_edgecolor('black')
+            spine.set_linewidth(0.5)
+        
+        # Remove ticks for cleaner look
+        ax.set_xticks([])
+        ax.set_yticks([])
+    
+    return fig
+
+
+def save_example_figure(fig, title, filename, output_dir='test_figures', dpi=150, bbox_inches='tight'):
+    """
+    Save an example figure to a file.
+    
+    This function saves a matplotlib figure to a file with optional title and formatting.
+    
+    Parameters:
+    -----------
+    fig : matplotlib.figure.Figure
+        The figure object to save
+    title : str
+        Title for the figure (will be added as suptitle)
+    filename : str
+        Filename to save the figure
+    output_dir : str, optional
+        Directory to save the figure in (default: 'test_figures')
+    dpi : int, optional
+        DPI for the saved figure (default: 150)
+    bbox_inches : str, optional
+        Bbox_inches parameter for saving (default: 'tight')
+    
+    Returns:
+    --------
+    str
+        Path to the saved figure file
+    
+    Examples:
+    ---------
+    # Save a figure
+    fig = render_example_figure(coords, (7, 5))
+    filepath = save_example_figure(fig, "My Layout", "example.png")
+    plt.close(fig)
+    
+    # Save with custom directory and DPI
+    filepath = save_example_figure(
+        fig, 
+        "My Layout", 
+        "example.png", 
+        output_dir='my_figures',
+        dpi=300
+    )
+    """
+    # Add title to figure
+    fig.suptitle(title, fontsize=14, fontweight='bold', y=0.95)
+    
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    filepath = os.path.join(output_dir, filename)
+    
+    # Save the figure
+    fig.savefig(filepath, dpi=dpi, bbox_inches=bbox_inches)
+    
+    print(f"✓ Saved: {filepath}")
+    return filepath
+
+
+def create_example_figure(coords, title, filename, fig_size_inches, grid_layout=None, section_info=None, output_dir='test_figures'):
+    """
+    Create and save an example figure with subplot coordinates.
+    
+    This is a convenience function that combines render_example_figure and save_example_figure.
+    Use this for quick figure creation and saving.
+    
+    Parameters:
+    -----------
+    coords : list
+        List of (left, bottom, width, height) coordinate tuples
+    title : str
+        Title for the figure
+    filename : str
+        Filename to save the figure
+    fig_size_inches : tuple
+        Figure size as (width, height) in inches
+    grid_layout : tuple, optional
+        Grid layout as (rows, cols) for display purposes
+    section_info : dict, optional
+        Additional information about sections or subplot groupings
+    output_dir : str, optional
+        Directory to save the figure in (default: 'test_figures')
+    
+    Returns:
+    --------
+    str
+        Path to the saved figure file
+    
+    Examples:
+    ---------
+    # Create and save a simple example figure
+    coords = calculate_subplot_coordinates(...)
+    filepath = create_example_figure(
+        coords, 
+        "My Layout", 
+        "example.png", 
+        (7, 5)
+    )
+    
+    # Create figure with section information
+    filepath = create_example_figure(
+        coords,
+        "Merged Layout",
+        "merged.png", 
+        (7, 6),
+        section_info={'section': 0, 'merged_pairs': [(0, 1)]}
+    )
+    """
+    # Render the figure
+    fig = render_example_figure(coords, fig_size_inches, grid_layout, section_info)
+    
+    # Save the figure
+    filepath = save_example_figure(fig, title, filename, output_dir)
+    
+    # Close the figure to free memory
+    plt.close(fig)
+    
+    return filepath

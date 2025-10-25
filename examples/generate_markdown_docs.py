@@ -4,51 +4,15 @@ All figures use 7" width and max 9" height.
 """
 
 import matplotlib.pyplot as plt
-from yplot.figure import calculate_subplot_coordinates
+from yplot.figure import (
+    calculate_subplot_coordinates, 
+    merge_adjacent_subplots,
+    merge_subplot_blocks
+)
+from yplot.util import create_example_figure
 import os
 
 
-def create_test_figure(coords, layout, title, filename, fig_size_inches):
-    """Create and save a test figure with the given coordinates."""
-    fig = plt.figure(figsize=fig_size_inches, dpi=100)
-    
-    # Color palette for different rows
-    row_colors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc', '#ffccff', '#ccffff']
-    
-    for idx, (left, bottom, width, height) in enumerate(coords):
-        ax = fig.add_axes([left, bottom, width, height])
-        
-        # Determine which row this subplot is in
-        row = idx // layout[1]  # layout[1] is number of columns
-        col = idx % layout[1]
-        
-        # Set background color based on row
-        ax.set_facecolor(row_colors[row % len(row_colors)])
-        
-        # Add text showing subplot info
-        ax.text(0.5, 0.5, f'R{row}C{col}\n{idx}', 
-                ha='center', va='center', fontsize=10, fontweight='bold')
-        
-        # Add a subtle border
-        for spine in ax.spines.values():
-            spine.set_edgecolor('black')
-            spine.set_linewidth(0.5)
-        
-        # Remove ticks for cleaner look
-        ax.set_xticks([])
-        ax.set_yticks([])
-    
-    fig.suptitle(title, fontsize=14, fontweight='bold', y=0.95)
-    
-    # Save the figure
-    output_dir = 'test_figures'
-    os.makedirs(output_dir, exist_ok=True)
-    filepath = os.path.join(output_dir, filename)
-    fig.savefig(filepath, dpi=150, bbox_inches='tight')
-    plt.close(fig)
-    
-    print(f"✓ Saved: {filepath}")
-    return filepath
 
 
 def generate_markdown_docs():
@@ -393,6 +357,166 @@ def generate_markdown_docs():
             'layout': (3, 3),
             'fig_size': (7, 6),
             'filename': 'test_10_minimal_margins.png'
+        },
+        {
+            'name': 'Test 11: Merge Adjacent Subplots',
+            'description': 'Merge adjacent subplots within a 3x3 grid to create larger subplots.',
+            'command': '''# Create 3x3 grid
+coords = calculate_subplot_coordinates(
+    fig_size_inches=(7, 6),
+    subplot_layout=(3, 3),
+    subplot_size_inches=(1.8, 1.5),
+    spacing={'hspace': 0.2, 'wspace': 0.2, 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
+)
+
+# Merge subplots 0 and 1 (top row, first two)
+merged_coords = merge_adjacent_subplots(coords, [(0, 1)])
+# Result: 8 subplots, with subplot 0 being twice as wide''',
+            'function': lambda: merge_adjacent_subplots(
+                calculate_subplot_coordinates(
+                    fig_size_inches=(7, 6),
+                    subplot_layout=(3, 3),
+                    subplot_size_inches=(1.8, 1.5),
+                    spacing={'hspace': 0.2, 'wspace': 0.2, 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
+                ),
+                [(0, 1)]
+            ),
+            'layout': (3, 3),
+            'fig_size': (7, 6),
+            'filename': 'test_11_merge_adjacent.png'
+        },
+        {
+            'name': 'Test 12: Merge Multiple Pairs',
+            'description': 'Merge multiple pairs of adjacent subplots in a 3x3 grid.',
+            'command': '''# Create 3x3 grid
+coords = calculate_subplot_coordinates(
+    fig_size_inches=(7, 6),
+    subplot_layout=(3, 3),
+    subplot_size_inches=(1.8, 1.5),
+    spacing={'hspace': 0.2, 'wspace': 0.2, 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
+)
+
+# Merge multiple pairs: (0,1), (3,4), (6,7)
+merged_coords = merge_adjacent_subplots(coords, [(0, 1), (3, 4), (6, 7)])
+# Result: 6 subplots with 3 merged pairs''',
+            'function': lambda: merge_adjacent_subplots(
+                calculate_subplot_coordinates(
+                    fig_size_inches=(7, 6),
+                    subplot_layout=(3, 3),
+                    subplot_size_inches=(1.8, 1.5),
+                    spacing={'hspace': 0.2, 'wspace': 0.2, 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
+                ),
+                [(0, 1), (3, 4), (6, 7)]
+            ),
+            'layout': (3, 3),
+            'fig_size': (7, 6),
+            'filename': 'test_12_merge_multiple_pairs.png'
+        },
+        {
+            'name': 'Test 13: Merge 2x2 Block',
+            'description': 'Merge a 2x2 block of subplots using merge_subplot_blocks.',
+            'command': '''# Create 3x3 grid
+coords = calculate_subplot_coordinates(
+    fig_size_inches=(7, 6),
+    subplot_layout=(3, 3),
+    subplot_size_inches=(1.8, 1.5),
+    spacing={'hspace': 0.2, 'wspace': 0.2, 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
+)
+
+# Merge a 2x2 block starting at subplot 0
+merged_coords = merge_subplot_blocks(coords, [{
+    'top_left': 0,
+    'rows': 2,
+    'cols': 2
+}])
+# Result: 5 subplots with one large 2x2 subplot''',
+            'function': lambda: merge_subplot_blocks(
+                calculate_subplot_coordinates(
+                    fig_size_inches=(7, 6),
+                    subplot_layout=(3, 3),
+                    subplot_size_inches=(1.8, 1.5),
+                    spacing={'hspace': 0.2, 'wspace': 0.2, 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
+                ),
+                [{'top_left': 0, 'rows': 2, 'cols': 2}]
+            ),
+            'layout': (3, 3),
+            'fig_size': (7, 6),
+            'filename': 'test_13_merge_2x2_block.png'
+        },
+        {
+            'name': 'Test 14: Complex Merging',
+            'description': 'Complex merging with multiple blocks in a 4x4 grid.',
+            'command': '''# Create 4x4 grid
+coords = calculate_subplot_coordinates(
+    fig_size_inches=(7, 6),
+    subplot_layout=(4, 4),
+    subplot_size_inches=(1.2, 1.0),
+    spacing={'hspace': 0.15, 'wspace': 0.15, 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
+)
+
+# Merge multiple blocks:
+# - 2x2 block at top-left (subplots 0,1,4,5)
+# - 1x2 block at top-right (subplots 2,3)
+# - 2x1 block at bottom-left (subplots 8,12)
+merged_coords = merge_adjacent_subplots(coords, [
+    (0, 1), (0, 4), (1, 5),  # 2x2 block at top-left
+    (2, 3),                   # 1x2 block at top-right
+    (8, 12)                   # 2x1 block at bottom-left
+])
+# Result: 12 subplots with multiple merged blocks''',
+            'function': lambda: merge_adjacent_subplots(
+                calculate_subplot_coordinates(
+                    fig_size_inches=(7, 6),
+                    subplot_layout=(4, 4),
+                    subplot_size_inches=(1.2, 1.0),
+                    spacing={'hspace': 0.15, 'wspace': 0.15, 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
+                ),
+                [(0, 1), (0, 4), (1, 5), (2, 3), (8, 12)]
+            ),
+            'layout': (4, 4),
+            'fig_size': (7, 6),
+            'filename': 'test_14_complex_merging.png'
+        },
+        {
+            'name': 'Test 15: Merge in Per-Row Layout',
+            'description': 'Merge subplots in a per-row customized layout.',
+            'command': '''# Create 3x3 grid with per-row customization
+coords = calculate_subplot_coordinates(
+    fig_size_inches=(7, 6),
+    subplot_layout=(3, 3),
+    subplot_size_inches={
+        'row_heights': [2.0, 1.5, 1.0],  # Different row heights
+        'col_widths': [1.8, 1.8, 1.8]
+    },
+    spacing={
+        'hspace': [0.2, 0.2],  # Horizontal spacing
+        'wspace': [0.3, 0.2],  # Vertical spacing
+        'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}
+    }
+)
+
+# Merge subplots 0 and 1 (top row, first two)
+merged_coords = merge_adjacent_subplots(coords, [(0, 1)])
+# Result: 8 subplots with per-row customization preserved''',
+            'function': lambda: merge_adjacent_subplots(
+                calculate_subplot_coordinates(
+                    fig_size_inches=(7, 6),
+                    subplot_layout=(3, 3),
+                    subplot_size_inches={
+                        'row_heights': [2.0, 1.5, 1.0],
+                        'col_widths': [1.8, 1.8, 1.8]
+                    },
+                    spacing={
+                        'hspace': [0.2, 0.2],
+                        'wspace': [0.3, 0.2],
+                        'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}
+                    }
+                ),
+                [(0, 1)]
+            ),
+            'layout': (3, 3),
+            'fig_size': (7, 6),
+            'filename': 'test_15_merge_per_row.png'
         }
     ]
     
@@ -402,11 +526,12 @@ def generate_markdown_docs():
         print(f"\nGenerating {test['name']}...")
         try:
             coords = test['function']()
-            filepath = create_test_figure(
-                coords, test['layout'], 
+            filepath = create_example_figure(
+                coords, 
                 f"{test['name']} ({test['layout'][0]}×{test['layout'][1]})",
                 test['filename'],
-                test['fig_size']
+                test['fig_size'],
+                grid_layout=test['layout']
             )
             results.append({
                 'test': test,

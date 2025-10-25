@@ -280,3 +280,279 @@ def calculate_subplot_coordinates(
         layout.margins = spacing['margins']
     
     return layout.get_coordinates()
+
+
+def create_merged_layout(fig_size_inches, layouts, merge_direction='horizontal', spacing=0.1):
+    """
+    Create a merged layout from multiple subplot layout configurations.
+    
+    This is a convenience function that combines multiple SubplotLayoutConfig
+    objects into a single coordinate list.
+    
+    Parameters:
+    -----------
+    fig_size_inches : tuple
+        Figure size as (width, height) in inches
+    layouts : list of SubplotLayoutConfig
+        List of SubplotLayoutConfig objects to merge
+    merge_direction : str, optional
+        Direction to merge layouts: 'horizontal' or 'vertical' (default: 'horizontal')
+    spacing : float, optional
+        Spacing between merged layouts in inches (default: 0.1)
+    
+    Returns:
+    --------
+    list
+        Merged list of tuples containing (left, bottom, width, height) coordinates
+        in figure-relative units (0-1)
+    
+    Examples:
+    ---------
+    # Create two layouts
+    layout1 = SubplotLayoutConfig((7, 4), rows=2, cols=2)
+    layout2 = SubplotLayoutConfig((7, 4), rows=2, cols=3)
+    
+    # Merge them horizontally
+    merged_coords = create_merged_layout(
+        fig_size_inches=(14, 4),
+        layouts=[layout1, layout2],
+        merge_direction='horizontal',
+        spacing=0.2
+    )
+    """
+    coordinate_lists = [layout.get_coordinates() for layout in layouts]
+    
+    if not coordinate_lists:
+        return []
+    
+    if len(coordinate_lists) == 1:
+        return coordinate_lists[0]
+    
+    # Convert spacing from inches to relative units
+    if merge_direction == 'horizontal':
+        spacing_rel = spacing / 7.0  # Convert to relative width
+    else:  # vertical
+        spacing_rel = spacing / 9.0  # Convert to relative height
+    
+    merged_coords = []
+    
+    if merge_direction == 'horizontal':
+        # Place coordinate lists side by side
+        current_left = 0.0
+        
+        for coord_list in coordinate_lists:
+            if not coord_list:
+                continue
+                
+            # Find the maximum width in this coordinate list
+            max_right = max(left + width for left, bottom, width, height in coord_list)
+            
+            # Scale and offset coordinates
+            for left, bottom, width, height in coord_list:
+                new_left = current_left + left
+                merged_coords.append((new_left, bottom, width, height))
+            
+            # Move to next position
+            current_left = max_right + spacing_rel
+    
+    else:  # vertical
+        # Stack coordinate lists on top of each other
+        current_bottom = 0.0
+        
+        for coord_list in coordinate_lists:
+            if not coord_list:
+                continue
+                
+            # Find the maximum height in this coordinate list
+            max_top = max(bottom + height for left, bottom, width, height in coord_list)
+            
+            # Scale and offset coordinates
+            for left, bottom, width, height in coord_list:
+                new_bottom = current_bottom + bottom
+                merged_coords.append((left, new_bottom, width, height))
+            
+            # Move to next position
+            current_bottom = max_top + spacing_rel
+    
+    return merged_coords
+
+
+def merge_adjacent_subplots(coordinates, merge_pairs):
+    """
+    Merge adjacent subplots within a coordinate list to create larger subplots.
+    
+    This function allows you to combine adjacent subplots in a grid to create
+    larger subplots, useful for creating complex layouts with varying subplot sizes.
+    
+    Parameters:
+    -----------
+    coordinates : list
+        List of (left, bottom, width, height) coordinate tuples
+    merge_pairs : list of tuples
+        List of (index1, index2) pairs to merge. Each pair specifies which
+        subplots to combine. The first subplot's coordinates will be expanded
+        to encompass both subplots, and the second will be removed.
+    
+    Returns:
+    --------
+    list
+        Modified coordinate list with merged subplots
+    
+    Examples:
+    ---------
+    # In a 3x3 grid (9 subplots), merge subplots 0 and 1 (top row, first two)
+    coords = calculate_subplot_coordinates(...)  # 3x3 grid
+    merged = merge_adjacent_subplots(coords, [(0, 1)])
+    # Result: 8 subplots, with subplot 0 being twice as wide
+    
+    # Merge multiple pairs
+    merged = merge_adjacent_subplots(coords, [(0, 1), (3, 4), (6, 7)])
+    # Result: 6 subplots with 3 merged pairs
+    
+    # Merge a 2x2 block (subplots 0, 1, 3, 4)
+    merged = merge_adjacent_subplots(coords, [(0, 1), (0, 3), (1, 4)])
+    # Result: 5 subplots with one large 2x2 subplot
+    """
+    if not coordinates or not merge_pairs:
+        return coordinates
+    
+    # Create a copy to avoid modifying the original
+    merged_coords = list(coordinates)
+    
+    # Sort merge pairs by first index to process in order
+    merge_pairs = sorted(merge_pairs, key=lambda x: x[0])
+    
+    # Track which subplots have been merged (to be removed)
+    removed_indices = set()
+    
+    for idx1, idx2 in merge_pairs:
+        # Skip if either subplot is already removed
+        if idx1 in removed_indices or idx2 in removed_indices:
+            continue
+        
+        # Skip if indices are out of range
+        if idx1 >= len(merged_coords) or idx2 >= len(merged_coords):
+            continue
+        
+        # Get coordinates for both subplots
+        left1, bottom1, width1, height1 = merged_coords[idx1]
+        left2, bottom2, width2, height2 = merged_coords[idx2]
+        
+        # Calculate the bounding box that encompasses both subplots
+        min_left = min(left1, left2)
+        min_bottom = min(bottom1, bottom2)
+        max_right = max(left1 + width1, left2 + width2)
+        max_top = max(bottom1 + height1, bottom2 + height2)
+        
+        # Create merged subplot coordinates
+        merged_left = min_left
+        merged_bottom = min_bottom
+        merged_width = max_right - min_left
+        merged_height = max_top - min_bottom
+        
+        # Update the first subplot with merged coordinates
+        merged_coords[idx1] = (merged_left, merged_bottom, merged_width, merged_height)
+        
+        # Mark the second subplot for removal
+        removed_indices.add(idx2)
+    
+    # Remove merged subplots (in reverse order to maintain indices)
+    for idx in sorted(removed_indices, reverse=True):
+        merged_coords.pop(idx)
+    
+    return merged_coords
+
+
+def merge_subplot_blocks(coordinates, block_merges):
+    """
+    Merge rectangular blocks of subplots within a coordinate list.
+    
+    This function allows you to merge rectangular blocks of subplots,
+    useful for creating complex layouts with large subplots.
+    
+    Parameters:
+    -----------
+    coordinates : list
+        List of (left, bottom, width, height) coordinate tuples
+    block_merges : list of dict
+        List of merge specifications. Each dict should contain:
+        - 'top_left': index of top-left subplot in the block
+        - 'bottom_right': index of bottom-right subplot in the block
+        - 'rows': number of rows in the block
+        - 'cols': number of columns in the block
+    
+    Returns:
+    --------
+    list
+        Modified coordinate list with merged blocks
+    
+    Examples:
+    ---------
+    # In a 3x3 grid, merge a 2x2 block starting at subplot 0
+    coords = calculate_subplot_coordinates(...)  # 3x3 grid
+    merged = merge_subplot_blocks(coords, [{
+        'top_left': 0,
+        'bottom_right': 4,  # subplot 4 is bottom-right of 2x2 block starting at 0
+        'rows': 2,
+        'cols': 2
+    }])
+    # Result: 5 subplots with one large 2x2 subplot
+    """
+    if not coordinates or not block_merges:
+        return coordinates
+    
+    # Create a copy to avoid modifying the original
+    merged_coords = list(coordinates)
+    
+    # Track which subplots have been merged (to be removed)
+    removed_indices = set()
+    
+    for block in block_merges:
+        top_left_idx = block['top_left']
+        rows = block['rows']
+        cols = block['cols']
+        
+        # Calculate the indices of all subplots in this block
+        block_indices = []
+        for row in range(rows):
+            for col in range(cols):
+                # Assuming the grid is row-major (subplots filled left-to-right, top-to-bottom)
+                # This is a simplified calculation - you might need to adjust based on your grid layout
+                idx = top_left_idx + row * cols + col
+                if idx < len(merged_coords):
+                    block_indices.append(idx)
+        
+        if not block_indices:
+            continue
+        
+        # Skip if any subplot in the block is already removed
+        if any(idx in removed_indices for idx in block_indices):
+            continue
+        
+        # Get coordinates for all subplots in the block
+        block_coords = [merged_coords[idx] for idx in block_indices]
+        
+        # Calculate the bounding box that encompasses all subplots in the block
+        min_left = min(left for left, bottom, width, height in block_coords)
+        min_bottom = min(bottom for left, bottom, width, height in block_coords)
+        max_right = max(left + width for left, bottom, width, height in block_coords)
+        max_top = max(bottom + height for left, bottom, width, height in block_coords)
+        
+        # Create merged subplot coordinates
+        merged_left = min_left
+        merged_bottom = min_bottom
+        merged_width = max_right - min_left
+        merged_height = max_top - min_bottom
+        
+        # Update the first subplot with merged coordinates
+        merged_coords[top_left_idx] = (merged_left, merged_bottom, merged_width, merged_height)
+        
+        # Mark all other subplots in the block for removal
+        for idx in block_indices[1:]:
+            removed_indices.add(idx)
+    
+    # Remove merged subplots (in reverse order to maintain indices)
+    for idx in sorted(removed_indices, reverse=True):
+        merged_coords.pop(idx)
+    
+    return merged_coords
