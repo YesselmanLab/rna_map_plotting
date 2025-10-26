@@ -203,41 +203,47 @@ class SubplotLayoutConfig:
 
 
 def calculate_subplot_coordinates(
-    fig_size_inches, subplot_layout, subplot_size_inches, spacing
+    fig_size_inches, subplot_layout=None, subplot_size_inches=None, spacing=None, subplot_info=None
 ):
     """
     Calculate subplot coordinates for matplotlib subplots with exact subplot sizes.
     
-    Supports both uniform sizing (backward compatible) and per-row customization.
-    Now supports different numbers of subplots per row.
+    Supports multiple interfaces:
+    - Traditional uniform grid (backward compatible)
+    - Variable columns per row
+    - Per-row subplot sizing
+    - Row-based dictionary interface (NEW!)
 
     Parameters:
     -----------
     fig_size_inches : tuple
         Figure size as (width, height) in inches
-    subplot_layout : tuple or list
+    subplot_layout : tuple or list, optional
         Number of subplots. Can be:
         - tuple: (rows, columns) - uniform grid (backward compatible)
         - list: [cols_row1, cols_row2, ...] - different columns per row
-    subplot_size_inches : tuple, dict, or list
+    subplot_size_inches : tuple, dict, or list, optional
         Subplot sizes. Can be:
         - tuple: (width, height) - uniform size for all subplots
         - dict: {'row_heights': list, 'col_widths': list} - per-row/col sizes
-          * row_heights: list of height in inches for each row
-          * col_widths: list of width in inches for each column
         - list: [{'width': float, 'height': float}, ...] - per-row subplot sizes
-          * Each dict specifies width and height for subplots in that row
-          * Length must match number of rows
-    spacing : dict
+    spacing : dict, optional
         Spacing parameters. Can be:
         - Simple (uniform): {'hspace': float, 'wspace': float, 'margins': dict}
-          * hspace: horizontal spacing between subplots in inches
-          * wspace: vertical spacing between subplots in inches
-          * margins: {'left': float, 'right': float, 'top': float, 'bottom': float}
         - Per-row: {'hspace': list, 'wspace': list, 'margins': dict}
-          * hspace: list of horizontal spacing in inches (length = cols-1)
-          * wspace: list of vertical spacing in inches (length = rows-1)
-          * margins: same as above
+    subplot_info : dict, optional
+        Row-based configuration dictionary. Format:
+        {
+            'row_1': {'cols': int, 'size': (width, height), 'hspace': float, 'wspace': float},
+            'row_2': {'cols': int, 'size': (width, height), 'hspace': float, 'wspace': float},
+            ...
+        }
+        Each row can specify:
+        - cols: number of columns in this row
+        - size: (width, height) tuple for subplots in this row
+        - hspace: horizontal spacing between subplots in this row
+        - wspace: vertical spacing after this row (except last row)
+        - margins: row-specific margins (optional)
 
     Returns:
     --------
@@ -247,41 +253,36 @@ def calculate_subplot_coordinates(
 
     Examples:
     ---------
-    # Uniform sizing (backward compatible)
+    # Traditional uniform grid (backward compatible)
     coords = calculate_subplot_coordinates(
         fig_size_inches=(10, 6),
         subplot_layout=(2, 3),
         subplot_size_inches=(2.5, 2.0),
-        spacing={'hspace': 0.5, 'wspace': 0.5, 
-                 'margins': {'left': 0.75, 'right': 0.75, 'top': 0.75, 'bottom': 0.75}}
+        spacing={'hspace': 0.5, 'wspace': 0.5, 'margins': {...}}
     )
     
-    # Different columns per row
+    # NEW: Row-based dictionary interface
     coords = calculate_subplot_coordinates(
-        fig_size_inches=(10, 8),
-        subplot_layout=[3, 2, 4],  # 3 cols in row 1, 2 cols in row 2, 4 cols in row 3
-        subplot_size_inches={'row_heights': [2.0, 2.0, 2.0], 'col_widths': [2.0, 2.0, 2.0, 2.0]},
-        spacing={'hspace': [0.5, 0.5], 'wspace': [0.5, 0.5],
-                 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
-    )
-    
-    # Per-row subplot sizing
-    coords = calculate_subplot_coordinates(
-        fig_size_inches=(10, 8),
-        subplot_layout=[3, 2, 4],  # 3 cols, 2 cols, 4 cols
-        subplot_size_inches=[
-            {'width': 2.0, 'height': 2.5},  # Row 1: 2.0" wide, 2.5" tall subplots
-            {'width': 3.0, 'height': 2.0},  # Row 2: 3.0" wide, 2.0" tall subplots  
-            {'width': 1.5, 'height': 1.8}   # Row 3: 1.5" wide, 1.8" tall subplots
-        ],
-        spacing={'hspace': [0.3, 0.3], 'wspace': [0.4, 0.3],
-                 'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}}
+        fig_size_inches=(12, 10),
+        subplot_info={
+            'row_1': {'cols': 3, 'size': (2.5, 3.0), 'hspace': 0.3, 'wspace': 0.4},
+            'row_2': {'cols': 2, 'size': (4.0, 2.0), 'hspace': 0.3, 'wspace': 0.3},
+            'row_3': {'cols': 4, 'size': (1.8, 2.5), 'hspace': 0.3}
+        }
     )
 
     Raises:
     -------
     Warning if subplots won't fit in the specified figure size
     """
+    # Handle new row-based dictionary interface
+    if subplot_info is not None:
+        return _calculate_row_dict_coordinates(fig_size_inches, subplot_info)
+    
+    # Validate required parameters for legacy interface
+    if subplot_layout is None or subplot_size_inches is None or spacing is None:
+        raise ValueError("For legacy interface, subplot_layout, subplot_size_inches, and spacing are required")
+    
     # Handle different layout types
     if isinstance(subplot_layout, tuple):
         # Backward compatible: uniform grid
@@ -334,6 +335,122 @@ def calculate_subplot_coordinates(
         )
     else:
         return layout.get_coordinates(cols_per_row)
+
+
+def _calculate_row_dict_coordinates(fig_size_inches, subplot_info):
+    """
+    Calculate coordinates using row-based dictionary interface.
+    
+    Parameters:
+    -----------
+    fig_size_inches : tuple
+        Figure size as (width, height) in inches
+    subplot_info : dict
+        Row-based configuration dictionary
+        
+    Returns:
+    --------
+    list
+        List of tuples, each containing (left, bottom, width, height) coordinates
+        in figure-relative units (0-1) for each subplot
+    """
+    import warnings
+    
+    fig_width, fig_height = fig_size_inches
+    
+    # Parse row information
+    rows = []
+    row_keys = sorted([k for k in subplot_info.keys() if k.startswith('row_')])
+    
+    if not row_keys:
+        raise ValueError("subplot_info must contain at least one 'row_X' key")
+    
+    for row_key in row_keys:
+        row_data = subplot_info[row_key]
+        
+        # Validate required fields
+        if 'cols' not in row_data or 'size' not in row_data:
+            raise ValueError(f"{row_key} must contain 'cols' and 'size' fields")
+        
+        # Extract row information
+        cols = row_data['cols']
+        size = row_data['size']
+        hspace = row_data.get('hspace', 0.3)
+        wspace = row_data.get('wspace', 0.3)
+        margins = row_data.get('margins', {'left': 0.75, 'right': 0.75, 'top': 0.75, 'bottom': 0.75})
+        
+        if not isinstance(size, (tuple, list)) or len(size) != 2:
+            raise ValueError(f"{row_key} 'size' must be a tuple/list of (width, height)")
+        
+        rows.append({
+            'cols': cols,
+            'width': size[0],
+            'height': size[1],
+            'hspace': hspace,
+            'wspace': wspace,
+            'margins': margins
+        })
+    
+    # Calculate total space needed
+    total_height = sum(row['height'] for row in rows)
+    total_wspace = sum(row['wspace'] for row in rows[:-1])  # No wspace after last row
+    total_margins_height = rows[0]['margins']['top'] + rows[-1]['margins']['bottom']
+    
+    required_height = total_height + total_wspace + total_margins_height
+    
+    # Warn if layout doesn't fit
+    if required_height > fig_height:
+        warnings.warn(
+            f"Subplot layout requires {required_height:.2f} inches height "
+            f"but figure is {fig_height:.2f} inches. Subplots may overlap."
+        )
+    
+    # Calculate coordinates
+    coordinates = []
+    
+    # Calculate cumulative positions for rows (from bottom to top)
+    row_bottoms = []
+    current_bottom = rows[-1]['margins']['bottom']  # Start from bottom row margin
+    
+    for row_idx in range(len(rows) - 1, -1, -1):  # Start from bottom row
+        row_bottoms.insert(0, current_bottom)  # Insert at beginning
+        current_bottom += rows[row_idx]['height']
+        if row_idx > 0:  # Add spacing if not the top row
+            current_bottom += rows[row_idx - 1]['wspace']
+    
+    # Generate coordinates for each subplot
+    for row_idx, row in enumerate(rows):
+        num_cols_in_row = row['cols']
+        row_height = row['height']
+        subplot_width = row['width']
+        hspace = row['hspace']
+        
+        # Calculate column positions for this row
+        col_lefts = []
+        current_left = row['margins']['left']
+        
+        for col in range(num_cols_in_row):
+            col_lefts.append(current_left)
+            current_left += subplot_width
+            if col < num_cols_in_row - 1:  # Add spacing if not the last column
+                current_left += hspace
+        
+        # Generate coordinates for subplots in this row
+        for col in range(num_cols_in_row):
+            left_inches = col_lefts[col]
+            bottom_inches = row_bottoms[row_idx]
+            width_inches = subplot_width
+            height_inches = row_height
+            
+            # Convert to figure-relative coordinates (0-1)
+            left_rel = left_inches / fig_width
+            bottom_rel = bottom_inches / fig_height
+            width_rel = width_inches / fig_width
+            height_rel = height_inches / fig_height
+            
+            coordinates.append((left_rel, bottom_rel, width_rel, height_rel))
+    
+    return coordinates
 
 
 def _calculate_per_row_coordinates(fig_size_inches, cols_per_row, subplot_size_inches, spacing):

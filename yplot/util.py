@@ -335,7 +335,7 @@ def render_example_figure(coords, fig_size_inches, grid_layout=None, section_inf
     return fig
 
 
-def save_example_figure(fig, title, filename, output_dir='test_figures', dpi=150, bbox_inches='tight'):
+def save_example_figure(fig, title, filename, output_dir='docs/figures', dpi=150, bbox_inches='tight'):
     """
     Save an example figure to a file.
     
@@ -350,7 +350,7 @@ def save_example_figure(fig, title, filename, output_dir='test_figures', dpi=150
     filename : str
         Filename to save the figure
     output_dir : str, optional
-        Directory to save the figure in (default: 'test_figures')
+        Directory to save the figure in (default: 'docs/figures')
     dpi : int, optional
         DPI for the saved figure (default: 150)
     bbox_inches : str, optional
@@ -391,7 +391,7 @@ def save_example_figure(fig, title, filename, output_dir='test_figures', dpi=150
     return filepath
 
 
-def create_example_figure(coords, title, filename, fig_size_inches, grid_layout=None, section_info=None, output_dir='test_figures'):
+def create_example_figure(coords, title, filename, fig_size_inches, grid_layout=None, section_info=None, output_dir='docs/figures'):
     """
     Create and save an example figure with subplot coordinates.
     
@@ -413,7 +413,7 @@ def create_example_figure(coords, title, filename, fig_size_inches, grid_layout=
     section_info : dict, optional
         Additional information about sections or subplot groupings
     output_dir : str, optional
-        Directory to save the figure in (default: 'test_figures')
+        Directory to save the figure in (default: 'docs/figures')
     
     Returns:
     --------

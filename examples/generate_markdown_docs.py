@@ -20,6 +20,55 @@ def generate_markdown_docs():
     
     # Test configurations with their command codes - all using 7" width, max 9" height
     tests = [
+        # NEW: Examples showing the row-based dictionary interface
+        {
+            'name': 'New Syntax 1: Row Dictionary Interface - Basic',
+            'description': 'Demonstrates the new row-based dictionary interface using subplot_info parameter.',
+            'command': '''coords = calculate_subplot_coordinates(
+    fig_size_inches=(12, 10),
+    subplot_info={
+        'row_1': {'cols': 3, 'size': (2.5, 3.0), 'hspace': 0.3, 'wspace': 0.4},
+        'row_2': {'cols': 2, 'size': (4.0, 2.0), 'hspace': 0.3, 'wspace': 0.3},
+        'row_3': {'cols': 4, 'size': (1.8, 2.5), 'hspace': 0.3}
+    }
+)''',
+            'function': lambda: calculate_subplot_coordinates(
+                fig_size_inches=(12, 10),
+                subplot_info={
+                    'row_1': {'cols': 3, 'size': (2.5, 3.0), 'hspace': 0.3, 'wspace': 0.4},
+                    'row_2': {'cols': 2, 'size': (4.0, 2.0), 'hspace': 0.3, 'wspace': 0.3},
+                    'row_3': {'cols': 4, 'size': (1.8, 2.5), 'hspace': 0.3}
+                }
+            ),
+            'layout': (3, 4),
+            'fig_size': (12, 10),
+            'filename': 'row_dict_interface_test.png'
+        },
+        {
+            'name': 'New Syntax 2: Row Dictionary Interface - Complex Layout',
+            'description': 'Demonstrates complex layout with different configurations for each row.',
+            'command': '''coords = calculate_subplot_coordinates(
+    fig_size_inches=(14, 12),
+    subplot_info={
+        'row_1': {'cols': 2, 'size': (3.0, 2.5), 'hspace': 0.3, 'wspace': 0.4},
+        'row_2': {'cols': 4, 'size': (2.0, 2.0), 'hspace': 0.2, 'wspace': 0.3},
+        'row_3': {'cols': 1, 'size': (4.0, 3.0), 'hspace': 0.0, 'wspace': 0.5},
+        'row_4': {'cols': 3, 'size': (2.5, 1.8), 'hspace': 0.3}
+    }
+)''',
+            'function': lambda: calculate_subplot_coordinates(
+                fig_size_inches=(14, 12),
+                subplot_info={
+                    'row_1': {'cols': 2, 'size': (3.0, 2.5), 'hspace': 0.3, 'wspace': 0.4},
+                    'row_2': {'cols': 4, 'size': (2.0, 2.0), 'hspace': 0.2, 'wspace': 0.3},
+                    'row_3': {'cols': 1, 'size': (4.0, 3.0), 'hspace': 0.0, 'wspace': 0.5},
+                    'row_4': {'cols': 3, 'size': (2.5, 1.8), 'hspace': 0.3}
+                }
+            ),
+            'layout': (4, 4),
+            'fig_size': (14, 12),
+            'filename': 'complex_row_dict_test.png'
+        },
         {
             'name': 'Test 1: Uniform Layout (Backward Compatible)',
             'description': 'Demonstrates backward compatibility with uniform subplot sizing.',
@@ -531,7 +580,8 @@ merged_coords = merge_adjacent_subplots(coords, [(0, 1)])
                 f"{test['name']} ({test['layout'][0]}×{test['layout'][1]})",
                 test['filename'],
                 test['fig_size'],
-                grid_layout=test['layout']
+                grid_layout=test['layout'],
+                output_dir='docs/figures'
             )
             results.append({
                 'test': test,
@@ -559,23 +609,49 @@ def generate_markdown_file(results):
     
     markdown_content = """# Per-Row Subplot Customization Examples
 
-This document demonstrates the enhanced `calculate_subplot_coordinates` function that supports per-row and per-column customization of subplot layouts.
+This document demonstrates the enhanced `calculate_subplot_coordinates` function that supports per-row and per-column customization of subplot layouts, including the new row-based dictionary interface.
 
 ## Overview
 
-The updated function supports both backward-compatible uniform layouts and advanced per-row/column customization:
+The updated function supports multiple interfaces for creating subplot layouts:
 
-- **Uniform layouts**: Use tuples for `subplot_size_inches` and single values for spacing
+- **NEW: Row-based dictionary interface**: Use the `subplot_info` parameter for intuitive row-by-row configuration
+- **Uniform layouts**: Use tuples for `subplot_size_inches` and single values for spacing (backward compatible)
 - **Per-row customization**: Use dictionaries with lists for `row_heights`, `col_widths`, and spacing
+- **Variable columns**: Specify different numbers of columns per row
 - **Mixed specifications**: Combine uniform and per-row settings as needed
 
-## API Reference
+## NEW: Row-Based Dictionary Interface
+
+The new `subplot_info` parameter provides an intuitive way to configure layouts row-by-row:
+
+```python
+coords = calculate_subplot_coordinates(
+    fig_size_inches=(12, 10),
+    subplot_info={
+        'row_1': {'cols': 3, 'size': (2.5, 3.0), 'hspace': 0.3, 'wspace': 0.4},
+        'row_2': {'cols': 2, 'size': (4.0, 2.0), 'hspace': 0.3, 'wspace': 0.3},
+        'row_3': {'cols': 4, 'size': (1.8, 2.5), 'hspace': 0.3}
+    }
+)
+```
+
+### Row Configuration Options
+
+Each row can specify:
+- `cols`: Number of columns in this row
+- `size`: (width, height) tuple for subplots in this row
+- `hspace`: Horizontal spacing between subplots in this row (default: 0.3)
+- `wspace`: Vertical spacing after this row, except the last row (default: 0.3)
+- `margins`: Row-specific margins (optional, default: uniform margins)
+
+## Legacy API Reference
 
 ### Function Signature
 ```python
 calculate_subplot_coordinates(
     fig_size_inches,      # tuple: (width, height) in inches
-    subplot_layout,       # tuple: (rows, columns)
+    subplot_layout,       # tuple: (rows, columns) or list: columns per row
     subplot_size_inches,  # tuple or dict: uniform or per-row/col sizes
     spacing              # dict: spacing and margin parameters
 )
@@ -614,7 +690,9 @@ calculate_subplot_coordinates(
 """
         
         if result['filepath']:
-            markdown_content += f"![{test['name']}]({result['filepath']})\n\n"
+            # Convert filepath to relative path from docs directory
+            relative_path = result['filepath'].replace('docs/figures/', 'figures/')
+            markdown_content += f"![{test['name']}]({relative_path})\n\n"
         else:
             markdown_content += f"**Error:** {result.get('error', 'Unknown error')}\n\n"
         
@@ -630,29 +708,34 @@ calculate_subplot_coordinates(
 
 ## Key Features Demonstrated
 
+- ✅ **NEW: Row-Based Dictionary Interface**: Intuitive row-by-row configuration with `subplot_info` parameter
 - ✅ **Backward Compatibility**: Original uniform API still works
 - ✅ **Per-Row Heights**: Different subplot heights for each row
 - ✅ **Per-Column Widths**: Different subplot widths for each column  
 - ✅ **Variable Spacing**: Custom spacing between rows and columns
+- ✅ **Variable Columns**: Different number of columns per row
 - ✅ **Mixed Specifications**: Combine uniform and per-row settings
 - ✅ **Complex Layouts**: Multiple customizations in one layout
 - ✅ **Visual Validation**: Each figure shows row/column indexing
 
 ## Usage Tips
 
-1. **Start with uniform layouts** for simple cases
-2. **Use per-row customization** when you need different subplot sizes
-3. **Mix uniform and per-row** specifications as needed
-4. **Check figure size requirements** - the function warns if subplots don't fit
-5. **Use lists for spacing** to create visual grouping between subplots
+1. **Try the new row-based interface** (`subplot_info`) for intuitive row-by-row configuration
+2. **Start with uniform layouts** for simple cases
+3. **Use per-row customization** when you need different subplot sizes
+4. **Use the row dictionary interface** for complex layouts with varying column counts
+5. **Mix uniform and per-row** specifications as needed
+6. **Check figure size requirements** - the function warns if subplots don't fit
+7. **Use lists for spacing** to create visual grouping between subplots
 
 """
     
     # Write markdown file
-    with open('per_row_subplot_examples.md', 'w') as f:
+    os.makedirs('docs', exist_ok=True)
+    with open('docs/per_row_subplot_examples.md', 'w') as f:
         f.write(markdown_content)
     
-    print(f"\n✓ Generated markdown documentation: per_row_subplot_examples.md")
+    print(f"\n✓ Generated markdown documentation: docs/per_row_subplot_examples.md")
 
 
 if __name__ == "__main__":
@@ -665,6 +748,6 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("Documentation Generation Complete")
     print("=" * 60)
-    print(f"✓ Generated markdown file: per_row_subplot_examples.md")
-    print(f"✓ Generated {len([r for r in results if r['filepath']])} test figures")
+    print(f"✓ Generated markdown file: docs/per_row_subplot_examples.md")
+    print(f"✓ Generated {len([r for r in results if r['filepath']])} test figures in docs/figures/")
     print("=" * 60)

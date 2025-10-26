@@ -44,8 +44,8 @@ coords = calculate_subplot_coordinates(
 
 For comprehensive examples and API reference, see:
 
-**[Per-Row Subplot Customization Examples](per_row_subplot_examples.md)**
-
-This documentation includes 10 detailed examples showing different layout configurations, command code, and resulting figures.
+- **[Per-Row Subplot Customization Examples](docs/per_row_subplot_examples.md)** - Detailed examples showing different layout configurations, command code, and resulting figures
+- **[Figure Layout Examples](notebooks/figure.ipynb)** - Jupyter notebook demonstrating figure layout capabilities
+- **[Legend Examples](notebooks/legend.ipynb)** - Jupyter notebook showing legend customization options
 
 ## TODO
