@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yplot"
+version = "0.1.0"
+description = "Common plotting tools to analyze DMS-MaPseq data"
+readme = "README.md"
+authors = [
+    {name = "Joe Yesselman", email = "jyesselm@unl.edu"}
+]
+requires-python = ">=3.8"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+keywords = ["yplot", "plotting", "DMS-MaPseq", "visualization"]
+dependencies = [
+    "wheel>=0.22",
+    "matplotlib",
+    "numpy",
+    "seaborn",
+    "pandas",
+]
+
+[project.urls]
+Homepage = "https://github.com/jyesselm/rna_map_plotting"
+Repository = "https://github.com/jyesselm/rna_map_plotting"
+
+[tool.setuptools]
+packages = ["yplot"]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.package-data]
+yplot = ["**/*"]
+
