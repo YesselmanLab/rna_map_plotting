@@ -97,13 +97,13 @@ class SubplotLayout:
             # Row-based configuration
             self.is_row_based = True
             self.fig_size_inches = tuple(
-                config.get("fig_size", config.get("fig_size_inches", (10, 8)))
+                config.get("fig_size", config.get("fig_size_inches", (7, 4)))
             )
             self.subplot_info = config
             self.rows = len(row_keys)
             self.cols = None  # Will be determined from row configs
             self.margins = config.get(
-                "margins", {"left": 0.75, "right": 0.75, "top": 0.75, "bottom": 0.75}
+                "margins", {"left": 0.00, "right": 0.00, "top": 0.00, "bottom": 0.00}
             )
             return
 
@@ -239,7 +239,7 @@ class SubplotLayout:
             hspace = row_data.get("hspace", 0.3)
             wspace = row_data.get("wspace", 0.3)
             margins = row_data.get(
-                "margins", {"left": 0.75, "right": 0.75, "top": 0.75, "bottom": 0.75}
+                "margins", {"left": 0.00, "right": 0.00, "top": 0.00, "bottom": 0.00}
             )
 
             if not isinstance(size, (tuple, list)) or len(size) != 2:
