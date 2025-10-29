@@ -30,3 +30,25 @@ def sequence_and_structure_x_axis(
     ax.set_xticks(x)
     ax.set_xticklabels([f"{s}\n{nt}" for s, nt in zip(sequence, structure)])
     return ax
+
+
+def sequence_x_axis(ax: plt.Axes, sequence: str) -> List[str]:
+    """
+    Set the x-axis of the given matplotlib Axes to display the sequence.
+
+    The x-axis tick labels will show each nucleotide in the sequence.
+    """
+    ax.set_xticks(range(0, len(sequence)))
+    ax.set_xticklabels(sequence)
+    return ax
+
+
+def structure_x_axis(ax: plt.Axes, structure: str) -> List[str]:
+    """
+    Set the x-axis of the given matplotlib Axes to display the structure.
+
+    The x-axis tick labels will show each nucleotide in the structure.
+    """
+    ax.set_xticks(range(0, len(structure)))
+    ax.set_xticklabels(structure)
+    return ax

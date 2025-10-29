@@ -29,6 +29,9 @@ class SubplotLayout:
         Number of rows in the subplot grid (for direct initialization)
     cols : int, optional
         Number of columns in the subplot grid (for direct initialization)
+    size : list of tuples, optional
+        List of (width, height) tuples for each column. If provided, overrides
+        col_widths and row_heights for individual column sizing.
     **kwargs
         Additional parameters for direct initialization
 
@@ -55,6 +58,14 @@ class SubplotLayout:
         row_heights=[3.0, 2.0],
         col_widths=[2.5, 2.5, 2.5]
     )
+
+    # Column-based sizing with size parameter
+    layout = SubplotLayout(
+        fig_size_inches=(10, 8),
+        rows=2,
+        cols=3,
+        size=[(2.0, 3.0), (2.5, 2.5), (2.0, 2.0)]  # (width, height) for each column
+    )
     """
 
     def __init__(
@@ -71,6 +82,7 @@ class SubplotLayout:
         self.cols = None
         self.row_heights = []
         self.col_widths = []
+        self.col_sizes = []  # New: (width, height) tuples for each column
         self.wspace = []
         self.hspace = []
         self.margins = {"left": 0.75, "right": 0.75, "top": 0.75, "bottom": 0.75}
@@ -105,6 +117,8 @@ class SubplotLayout:
             self.margins = config.get(
                 "margins", {"left": 0.00, "right": 0.00, "top": 0.00, "bottom": 0.00}
             )
+            # Validate that all provided parameters are recognized
+            self._validate_config_parameters(config)
             return
 
         # Standard configuration
@@ -123,7 +137,29 @@ class SubplotLayout:
 
         # Set default values
         self.row_heights = config.get("row_heights", [2.0] * self.rows)
-        self.col_widths = config.get("col_widths", [2.0] * self.cols)
+
+        # Handle column sizing - check for size parameter first, then col_widths
+        col_sizes = config.get("size")
+        if col_sizes is not None:
+            # Use size parameter - each element should be (width, height)
+            if len(col_sizes) != self.cols:
+                raise ValueError(
+                    f"size must have {self.cols} elements, got {len(col_sizes)}"
+                )
+            # Validate that each element is a tuple/list of length 2
+            for i, size in enumerate(col_sizes):
+                if not isinstance(size, (tuple, list)) or len(size) != 2:
+                    raise ValueError(
+                        f"size[{i}] must be a tuple/list of (width, height), got {size}"
+                    )
+            self.col_sizes = col_sizes
+            # Extract widths for backward compatibility
+            self.col_widths = [size[0] for size in col_sizes]
+        else:
+            # Use traditional col_widths parameter
+            self.col_widths = config.get("col_widths", [2.0] * self.cols)
+            self.col_sizes = []  # Not using size parameter
+
         self.wspace = config.get(
             "wspace", [0.5] * (self.rows - 1) if self.rows > 1 else []
         )
@@ -131,6 +167,9 @@ class SubplotLayout:
             "hspace", [0.5] * (self.cols - 1) if self.cols > 1 else []
         )
         self.margins = config.get("margins", self.margins)
+
+        # Validate that all provided parameters are recognized
+        self._validate_config_parameters(config)
 
     def _load_from_parameters(
         self, fig_size_inches: Tuple[float, float], rows: int, cols: int, **kwargs
@@ -152,16 +191,36 @@ class SubplotLayout:
         else:
             self.row_heights = [2.0] * rows
 
-        # Set column widths
+        # Set column widths or sizes
         col_widths = kwargs.get("col_widths")
-        if col_widths is not None:
+        col_sizes = kwargs.get("size")  # New parameter for (width, height) tuples
+
+        if col_sizes is not None:
+            # Use size parameter - each element should be (width, height)
+            if len(col_sizes) != cols:
+                raise ValueError(
+                    f"size must have {cols} elements, got {len(col_sizes)}"
+                )
+            # Validate that each element is a tuple/list of length 2
+            for i, size in enumerate(col_sizes):
+                if not isinstance(size, (tuple, list)) or len(size) != 2:
+                    raise ValueError(
+                        f"size[{i}] must be a tuple/list of (width, height), got {size}"
+                    )
+            self.col_sizes = col_sizes
+            # Extract widths for backward compatibility
+            self.col_widths = [size[0] for size in col_sizes]
+        elif col_widths is not None:
+            # Use traditional col_widths parameter
             if len(col_widths) != cols:
                 raise ValueError(
                     f"col_widths must have {cols} elements, got {len(col_widths)}"
                 )
             self.col_widths = col_widths
+            self.col_sizes = []  # Not using size parameter
         else:
             self.col_widths = [2.0] * cols
+            self.col_sizes = []  # Not using size parameter
 
         # Set vertical spacing (between rows)
         wspace = kwargs.get("wspace")
@@ -189,6 +248,49 @@ class SubplotLayout:
         margins = kwargs.get("margins")
         if margins is not None:
             self.margins = margins
+
+    def _validate_config_parameters(self, config: Dict):
+        """Validate that all provided configuration parameters are recognized."""
+        # Define all valid parameters for standard configuration
+        valid_standard_params = {
+            "fig_size",
+            "fig_size_inches",
+            "rows",
+            "cols",
+            "row_heights",
+            "col_widths",
+            "size",
+            "wspace",
+            "hspace",
+            "margins",
+        }
+
+        # Define all valid parameters for row-based configuration
+        valid_row_based_params = {"fig_size", "fig_size_inches", "margins"}
+
+        # Get the parameters that were actually provided
+        provided_params = set(config.keys())
+
+        if self.is_row_based:
+            # For row-based config, check for row_X keys and other valid params
+            row_keys = {k for k in provided_params if k.startswith("row_")}
+            other_params = provided_params - row_keys
+
+            # Check if any non-row parameters are invalid
+            invalid_params = other_params - valid_row_based_params
+            if invalid_params:
+                raise ValueError(
+                    f"Unrecognized parameters in row-based configuration: {sorted(invalid_params)}. "
+                    f"Valid parameters are: {sorted(valid_row_based_params | {'row_X'})}"
+                )
+        else:
+            # For standard config, check against valid parameters
+            invalid_params = provided_params - valid_standard_params
+            if invalid_params:
+                raise ValueError(
+                    f"Unrecognized parameters in configuration: {sorted(invalid_params)}. "
+                    f"Valid parameters are: {sorted(valid_standard_params)}"
+                )
 
     def get_coordinates(
         self, cols_per_row: Optional[List[int]] = None
@@ -402,7 +504,14 @@ class SubplotLayout:
                 left_inches = col_lefts[col]
                 bottom_inches = row_bottoms[row]
                 width_inches = self.col_widths[col]
-                height_inches = self.row_heights[row]
+
+                # Use height from col_sizes if available, otherwise use row_heights
+                if self.col_sizes and col < len(self.col_sizes):
+                    height_inches = self.col_sizes[col][
+                        1
+                    ]  # Use height from (width, height) tuple
+                else:
+                    height_inches = self.row_heights[row]
 
                 # Convert to figure-relative coordinates (0-1)
                 left_rel = left_inches / fig_width
@@ -419,7 +528,7 @@ class SubplotLayout:
         if self.is_row_based:
             return self.subplot_info
         else:
-            return {
+            result = {
                 "fig_size": list(self.fig_size_inches),
                 "rows": self.rows,
                 "cols": self.cols,
@@ -429,6 +538,10 @@ class SubplotLayout:
                 "hspace": self.hspace,
                 "margins": self.margins,
             }
+            # Include col_sizes if it was used
+            if self.col_sizes:
+                result["size"] = self.col_sizes
+            return result
 
     def to_yaml(self, yaml_file: Union[str, Path]):
         """Save configuration to YAML file."""
