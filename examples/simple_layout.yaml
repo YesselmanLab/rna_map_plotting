@@ -1,0 +1,13 @@
+# Simple 2x3 grid layout
+fig_size: [10, 8]
+rows: 2
+cols: 3
+row_heights: [3.0, 2.0]
+col_widths: [2.5, 2.5, 2.5]
+wspace: [0.5]
+hspace: [0.3, 0.3]
+margins:
+  left: 0.75
+  right: 0.75
+  top: 0.75
+  bottom: 0.75

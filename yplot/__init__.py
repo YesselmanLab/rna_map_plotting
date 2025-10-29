@@ -12,8 +12,9 @@ from yplot.util import (
     save_example_figure
 )
 from yplot.figure import (
-    SubplotLayoutConfig, 
-    calculate_subplot_coordinates, 
+    SubplotLayout,
+    calculate_subplot_coordinates,
+    generate_subplot_coordinates_from_dict,
     create_merged_layout,
     merge_adjacent_subplots,
     merge_subplot_blocks

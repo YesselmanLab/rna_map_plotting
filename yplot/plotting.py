@@ -2,10 +2,12 @@ import matplotlib.pyplot as plt
 import matplotlib.axes as axes
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from typing import List, Union, Optional
 
 from yplot.logger import get_logger
 from yplot.util import colors_for_sequence
+from yplot.figure import SubplotLayout, calculate_subplot_coordinates
 
 log = get_logger(__name__)
 
@@ -177,3 +179,64 @@ def plot_pop_avg_traces_all(df: pd.DataFrame, label_col="rna_name", **kwargs):
         plt.plot(row["data"], label=row[label_col])
     fig.legend(loc="upper left")
     return fig
+
+
+def create_figure_with_layout(layout, **kwargs):
+    """
+    Create a matplotlib figure using a SubplotLayout configuration.
+    
+    This is the main function for creating figures with the new layout system.
+    
+    Parameters:
+    -----------
+    layout : SubplotLayout, dict, str, or Path
+        Layout configuration. Can be:
+        - SubplotLayout object
+        - Dictionary with layout configuration
+        - String path to YAML file
+        - Path object to YAML file
+    **kwargs
+        Additional keyword arguments passed to plt.figure()
+    
+    Returns:
+    --------
+    tuple
+        (fig, axes) where fig is matplotlib.figure.Figure and axes is list of matplotlib.axes.Axes
+    
+    Examples:
+    ---------
+    # Using SubplotLayout object
+    layout = SubplotLayout(fig_size_inches=(10, 8), rows=2, cols=3)
+    fig, axes = create_figure_with_layout(layout)
+    
+    # From dictionary
+    config = {'fig_size': [10, 8], 'rows': 2, 'cols': 3, 'row_heights': [3.0, 2.0]}
+    fig, axes = create_figure_with_layout(config)
+    
+    # From YAML file
+    fig, axes = create_figure_with_layout('my_layout.yaml')
+    """
+    # Convert to SubplotLayout object if needed
+    if not isinstance(layout, SubplotLayout):
+        if isinstance(layout, (str, Path)):
+            layout = SubplotLayout(yaml_file=layout)
+        elif isinstance(layout, dict):
+            layout = SubplotLayout(config=layout)
+        else:
+            raise TypeError("layout must be a SubplotLayout object, dictionary, or YAML file path")
+    
+    # Get coordinates from layout
+    coords = calculate_subplot_coordinates(layout)
+    
+    # Create figure
+    fig = plt.figure(figsize=layout.fig_size_inches, **kwargs)
+    
+    # Create axes for each subplot
+    axes = []
+    for i, (left, bottom, width, height) in enumerate(coords):
+        ax = fig.add_axes([left, bottom, width, height])
+        axes.append(ax)
+    
+    return fig, axes
+
+

@@ -8,7 +8,8 @@ for figure insertion and layout planning.
 
 import matplotlib.pyplot as plt
 import numpy as np
-from yplot.figure import calculate_subplot_coordinates, expand_subplot_coordinates
+from yplot.figure import SubplotLayout, calculate_subplot_coordinates, expand_subplot_coordinates
+from yplot.plotting import create_figure_with_layout
 from yplot.style import publication_style_ax
 
 def example_1_basic_expansion():
@@ -35,17 +36,20 @@ def example_2_figure_insertion():
     """Example 2: Practical figure insertion demonstration."""
     print("Example 2: Figure insertion demonstration")
     
-    # Create a subplot layout
-    coords = calculate_subplot_coordinates(
+    # Create a subplot layout using SubplotLayout
+    layout = SubplotLayout(
         fig_size_inches=(12, 8),
-        subplot_layout=(2, 3),
-        subplot_size_inches=(2.5, 2.0),
-        spacing={
-            'hspace': 0.4,
-            'wspace': 0.4,
-            'margins': {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}
-        }
+        rows=2,
+        cols=3
     )
+    layout.set_uniform_row_height(2.0)
+    layout.set_uniform_col_width(2.5)
+    layout.set_uniform_wspace(0.4)
+    layout.set_uniform_hspace(0.4)
+    layout.margins = {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}
+    
+    # Get coordinates
+    coords = calculate_subplot_coordinates(layout)
     
     # Expand the first subplot for figure insertion
     expanded_coord = expand_subplot_coordinates(
@@ -167,9 +171,46 @@ def example_4_with_without_spacing():
     print(f"Difference (with - without): {width_diff:.4f} width, {height_diff:.4f} height")
     print()
 
-def example_5_per_row_spacing():
-    """Example 5: Expansion with per-row spacing."""
-    print("Example 5: Expansion with per-row spacing")
+def example_5_create_figure_with_layout():
+    """Example 5: Using create_figure_with_layout for easy figure creation."""
+    print("Example 5: Using create_figure_with_layout")
+    
+    # Create layout using SubplotLayout
+    layout = SubplotLayout(
+        fig_size_inches=(10, 6),
+        rows=2,
+        cols=3
+    )
+    layout.row_heights = [2.5, 2.0]
+    layout.col_widths = [2.5, 2.5, 2.5]
+    layout.set_uniform_wspace(0.3)
+    layout.set_uniform_hspace(0.2)
+    layout.margins = {'left': 0.5, 'right': 0.5, 'top': 0.5, 'bottom': 0.5}
+    
+    # Create figure and axes in one step
+    fig, axes = create_figure_with_layout(layout)
+    
+    # Add some content to demonstrate
+    for i, ax in enumerate(axes):
+        x = np.linspace(0, 2*np.pi, 100)
+        y = np.sin(x + i * np.pi/6)
+        ax.plot(x, y, linewidth=2)
+        ax.set_title(f'Plot {i+1}', fontsize=12)
+        ax.grid(True, alpha=0.3)
+        publication_style_ax(ax)
+    
+    fig.suptitle("Example 5: create_figure_with_layout", fontsize=16, fontweight='bold')
+    
+    # Save the figure
+    fig.savefig('docs/figures/example_05_create_figure_with_layout.png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    
+    print("Saved demonstration figure: docs/figures/example_05_create_figure_with_layout.png")
+    print()
+
+def example_6_per_row_spacing():
+    """Example 6: Expansion with per-row spacing."""
+    print("Example 6: Expansion with per-row spacing")
     
     # Multiple subplot coordinates
     coords = [
@@ -207,7 +248,8 @@ def run_all_examples():
     example_2_figure_insertion()
     example_3_multiple_expansion()
     example_4_with_without_spacing()
-    example_5_per_row_spacing()
+    example_5_create_figure_with_layout()
+    example_6_per_row_spacing()
     
     print("=" * 60)
     print("All examples completed successfully!")

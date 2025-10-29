@@ -1,0 +1,31 @@
+# Row-based layout with different configurations per row
+fig_size: [14, 12]
+row_1:
+  cols: 3
+  size: [3.0, 2.5]
+  hspace: 0.3
+  wspace: 0.4
+  margins:
+    left: 0.5
+    right: 0.5
+    top: 0.5
+    bottom: 0.5
+row_2:
+  cols: 2
+  size: [4.5, 3.0]
+  hspace: 0.5
+  wspace: 0.3
+  margins:
+    left: 0.5
+    right: 0.5
+    top: 0.0
+    bottom: 0.0
+row_3:
+  cols: 4
+  size: [2.0, 2.0]
+  hspace: 0.2
+  margins:
+    left: 0.5
+    right: 0.5
+    top: 0.0
+    bottom: 0.5
