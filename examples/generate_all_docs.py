@@ -18,8 +18,8 @@ from pathlib import Path
 from yplot.figure import (
     SubplotLayout,
     calculate_subplot_coordinates, 
-    merge_adjacent_subplots,
-    merge_subplot_blocks,
+)
+from yplot.layout_utils import (
     expand_subplot_coordinates
 )
 from yplot.plotting import create_figure_with_layout
@@ -198,10 +198,10 @@ layout = SubplotLayout(
 
 coords = calculate_subplot_coordinates(layout)
 
-# Merge subplots 0 and 1 (top row, first two)
-merged_coords = merge_adjacent_subplots(coords, [(0, 1)])
+# Merge subplots 0 and 1 (top row, first two) - FUNCTION REMOVED IN STREAMLINING
+# merged_coords = merge_adjacent_subplots(coords, [(0, 1)])
 # Result: 8 subplots, with subplot 0 being twice as wide''',
-            'function': lambda: merge_adjacent_subplots(
+            'function': lambda: None  # merge_adjacent_subplots(
                 SubplotLayout(config={
                     'fig_size': [7, 6],
                     'rows': 3,
@@ -230,7 +230,7 @@ def generate_expand_coordinates_examples():
         {
             'name': 'Expand 1: Basic Single Subplot Expansion',
             'description': 'Expand a single subplot coordinate to include margins and spacing.',
-            'command': '''from yplot.figure import expand_subplot_coordinates
+            'command': '''from yplot.layout_utils import expand_subplot_coordinates
 
 # Original subplot coordinate
 coord = (0.2, 0.2, 0.6, 0.6)
@@ -426,7 +426,7 @@ The `expand_subplot_coordinates` function expands subplot coordinates to include
 ### Basic Usage
 
 ```python
-from yplot.figure import expand_subplot_coordinates
+from yplot.layout_utils import expand_subplot_coordinates
 
 # Original subplot coordinate
 coord = (0.2, 0.2, 0.6, 0.6)
@@ -798,7 +798,7 @@ expand_subplot_coordinates(
 Expand a single subplot coordinate to include margins and spacing.
 
 ```python
-from yplot.figure import expand_subplot_coordinates
+from yplot.layout_utils import expand_subplot_coordinates
 
 # Original subplot coordinate
 coord = (0.2, 0.2, 0.6, 0.6)
@@ -842,7 +842,8 @@ expanded_coords = expand_subplot_coordinates(
 Practical example showing how to use expanded coordinates for figure insertion.
 
 ```python
-from yplot.figure import SubplotLayout, calculate_subplot_coordinates, expand_subplot_coordinates
+from yplot.figure import SubplotLayout, calculate_subplot_coordinates
+from yplot.layout_utils import expand_subplot_coordinates
 import matplotlib.pyplot as plt
 
 # Create a complete subplot layout in one command
