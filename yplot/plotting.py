@@ -1,186 +1,195 @@
 import matplotlib.pyplot as plt
 import matplotlib.axes as axes
+import matplotlib.image as mpimg
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Sequence
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 
 from yplot.logger import get_logger
-from yplot.util import colors_for_sequence
 from yplot.figure import SubplotLayout, calculate_subplot_coordinates
 
-log = get_logger(__name__)
+log = get_logger("plotting")
 
 
-def sequence_and_structure_x_axis(
-    ax: plt.Axes, sequence: str, structure: str
-) -> List[str]:
+def extract_xy(data, x, y):
     """
-    Set the x-axis of the given matplotlib Axes to display both the sequence and secondary
-    structure.
+    Extract x and y array-like objects from different input combinations.
 
-    The x-axis tick labels will show each nucleotide in the sequence, with the corresponding
-    secondary structure character below it (separated by a newline).
+    If `data` is a DataFrame and `x` and `y` are strings, fetch the columns from `data`.
+    Otherwise, if `x` and `y` are array-like, return them directly.
+
+    Parameters
+    ----------
+    data : pd.DataFrame or None
+        Source dataframe from which to extract columns.
+    x : str or array-like
+        Column name or array-like representing x values.
+    y : str or array-like
+        Column name or array-like representing y values.
+
+    Returns
+    -------
+    x_values, y_values : array-like
+        Arrays for x and y variables.
+    """
+    if data is not None:
+        if isinstance(x, str) and isinstance(y, str):
+            return data[x], data[y]
+    # if data is None or x/y are not str, assume arraylike
+    return x, y
+
+
+def add_subplot_labels(
+    fig, coords_list, start="A", left_offset=0.0572, top_offset=0.02, fontsize=12
+):
+    """
+    Add subplot labels (A, B, C, ...) to the top-left corner of each subplot.
 
     Args:
-        ax (plt.Axes): The matplotlib Axes object to modify.
-        sequence (str): The RNA or DNA sequence string.
-        structure (str): The secondary structure string (e.g., dot-bracket notation),
-            same length as sequence.
-
-    Returns:
-        plt.Axes: The modified matplotlib Axes object with updated x-axis tick labels.
-
-    Example:
-        >>> fig, ax = plt.subplots()
-        >>> sequence_and_structure_x_axis(ax, "ACGU", "(((.")
-        >>> plt.show()
+        fig: matplotlib Figure object.
+        coords_list: list of (left, bottom, width, height) in figure fraction coordinates.
+        fig_size: (width, height) in inches.
+        start: starting letter.
     """
-    x = list(range(len(sequence)))
-    ax.set_xticks(x)
-    ax.set_xticklabels([f"{s}\n{nt}" for s, nt in zip(sequence, structure)])
-    return ax
+    letters = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    pos = letters.index(start)
+    for i, coords in enumerate(coords_list):
+        left, bottom, width, height = coords
+        # Place label at a fixed offset from the top-left corner of the subplot
+        # Use figure fraction coordinates for robust placement
+        x = left - left_offset
+        y = bottom + height + top_offset
+        fig.text(
+            x,
+            y,
+            letters[pos],
+            fontsize=fontsize,
+            weight="bold",
+            fontname="Arial",
+            va="top",
+            ha="left",
+        )
+        pos += 1
 
 
-def plot_pop_avg(
-    sequence: str, structure: str, reactivities: List[float], ax: plt.Axes
+def add_ax_corner_text(ax, text, pos="top left", fontsize=6):
+    if pos == "upper left":
+        ax.text(
+            0.03,
+            0.97,
+            text,
+            transform=ax.transAxes,
+            fontsize=fontsize,
+            fontname="Arial",
+            verticalalignment="top",
+            horizontalalignment="left",
+        )
+    elif pos == "upper right":
+        ax.text(
+            0.97,
+            0.97,
+            text,
+            transform=ax.transAxes,
+            fontsize=fontsize,
+            fontname="Arial",
+            verticalalignment="top",
+            horizontalalignment="right",
+        )
+    elif pos == "bottom left":
+        ax.text(
+            0.03,
+            0.03,
+            text,
+            transform=ax.transAxes,
+            fontsize=fontsize,
+            fontname="Arial",
+            verticalalignment="bottom",
+            horizontalalignment="left",
+        )
+    elif pos == "bottom right":
+        ax.text(
+            0.97,
+            0.03,
+            text,
+            transform=ax.transAxes,
+            fontsize=fontsize,
+            fontname="Arial",
+            verticalalignment="bottom",
+            horizontalalignment="right",
+        )
+
+
+def plot_regression_line(x, y, ax, pos="upper left", fontsize=6):
+    model = LinearRegression()
+    model.fit(x, y)
+    r2 = r2_score(y, model.predict(x))
+    x_pred = np.linspace(x.min(), x.max(), 1000).reshape(-1, 1)
+    ax.plot(x_pred, model.predict(x_pred), color="black", linewidth=1, linestyle="--")
+    add_ax_corner_text(ax, f"R² = {r2:.2f}", pos=pos, fontsize=fontsize)
+    return r2
+
+
+def scatter_plot_w_regression(
+    data=None, ax=None, x=None, y=None, pos="upper left", size=6, fontsize=6
+):
+    # Prepare the data
+    x, y = extract_xy(data, x, y)
+    x = x.reshape(-1, 1)
+    if ax is None:
+        _, ax = plt.subplots()
+    ax.scatter(x, y, s=size)
+    plot_regression_line(x, y, ax, pos=pos, fontsize=fontsize)
+
+
+def lollipop_plot(
+    x: Sequence,
+    y1: Sequence,
+    y2: Optional[Sequence] = None,
+    *,
+    ax: Optional[plt.Axes] = None,
+    line_color: str = "black",
+    marker_size: float = 40,
+    line_width: float = 1.0,
 ) -> plt.Axes:
     """
-    Plot the population average reactivities for a given RNA sequence on the provided matplotlib Axes.
+    Create a single or paired lollipop plot.
 
-    Each nucleotide in the sequence is colored according to its identity, and the x-axis is labeled
-    with both the sequence and the corresponding secondary structure.
+    Parameters
+    ----------
+    x : sequence
+        Categories or numeric positions for the lollipops.
+    y1 : sequence
+        First set of values to plot.
+    y2 : sequence, optional
+        Second set of values for paired lollipop plot.
+    ax : matplotlib.axes.Axes, optional
+        Axis to draw the plot on. Creates one if None.
+    color1, color2 : str, default matplotlib defaults
+        Colors for the data points.
+    line_color : str, default "black"
+        Color of the connecting lines.
+    marker_size : float, default 40
+        Size of scatter markers.
+    line_width : float, default 1.0
+        Width of the connecting lines.
 
-    Args:
-        seq (str): The RNA sequence.
-        ss (str): The secondary structure string corresponding to the sequence.
-        reactivities (List[float]): Reactivity values for each nucleotide in the sequence.
-        ax (plt.Axes): The matplotlib Axes object to plot on.
-
-    Returns:
-        plt.Axes: The matplotlib Axes object containing the population average reactivity bar plot.
-
-    Example:
-        >>> fig, ax = plt.subplots()
-        >>> plot_pop_avg("ACGU", "(..)", [0.1, 0.2, 0.3, 0.4], ax)
-        >>> plt.show()
+    Returns
+    -------
+    matplotlib.axes.Axes
+        The axis containing the plot.
     """
-    sequence = sequence.replace("U", "T")  # should be RNA
-    colors = colors_for_sequence(sequence)
-    ax.bar(range(0, len(reactivities)), reactivities, color=colors)
-    sequence_and_structure_x_axis(ax, sequence, structure)
+    if ax is None:
+        _, ax = plt.subplots()
+
+    for xi, yi1, yi2 in zip(x, y1, y2):
+        ax.vlines(xi, min(yi1, yi2), max(yi1, yi2), color=line_color, lw=line_width)
+    ax.scatter(x, y1, s=marker_size, zorder=3)
+    ax.scatter(x, y2, s=marker_size, zorder=3)
+    ax.set_xticks(x)
     return ax
-
-
-def plot_pop_avg_from_row(row, ax: plt.Axes, data_col: str = "data") -> plt.Axes:
-    """
-    Plots the population average from a given row of data.
-
-    Args:
-        row: A dictionary-like object representing a row of data.
-        data_col: The name of the column containing the data to plot. Default is "data".
-        ax: The matplotlib Axes object to plot on. If not provided, a new figure and axes will be created.
-
-    Returns:
-        The matplotlib Axes object containing the plot.
-
-    Raises:
-        None.
-
-    Example:
-        >>> row = {"sequence": "ACGU", "structure": "(((.)))", "data": [0.1, 0.2, 0.3, 0.4]}
-        >>> plot_pop_avg_from_row(row)
-    """
-    return plot_pop_avg(row["sequence"], row["structure"], row[data_col], ax)
-
-
-def plot_pop_avg_diff_from_rows(row1, row2, data_col="data", **kwargs) -> plt.Figure:
-    """
-    Plots the population average difference between two rows.
-
-    Args:
-        row1 (dict): The first row containing the data.
-        row2 (dict): The second row containing the data.
-        data_col (str, optional): The column name for the data. Defaults to "data".
-        **kwargs: Additional keyword arguments to be passed to plt.subplots().
-
-    Returns:
-        matplotlib.figure.Figure: The generated figure.
-
-    Raises:
-        None
-
-    Example:
-        row1 = {"sequence": "ACGU", "structure": "((((", "data": [1, 2, 3, 4]}
-        row2 = {"sequence": "ACGU", "structure": "((((", "data": [5, 6, 7, 8]}
-        fig = plot_pop_avg_diff_from_rows(row1, row2)
-        plt.show()
-    """
-    fig, axes = plt.subplots(3, 1, **kwargs)
-    plot_pop_avg_from_row(row1, data_col, axes[0])
-    plot_pop_avg_from_row(row2, data_col, axes[1])
-    diff = {
-        "sequence": row1["sequence"],
-        "structure": row1["structure"],
-        data_col: np.array(row1[data_col]) - np.array(row2[data_col]),
-    }
-    plot_pop_avg_from_row(diff, data_col, axes[2])
-    return fig
-
-
-def plot_pop_avg_all(df: pd.DataFrame, data_col: str = "data", **kwargs) -> plt.Figure:
-    """
-    Plots the population average for each row in the given DataFrame.
-
-    Args:
-        df (pd.DataFrame): The DataFrame containing the data to be plotted.
-        data_col (str, optional): The column name in the DataFrame that contains the data to be plotted.
-            Defaults to "data".
-        **kwargs: Additional keyword arguments to be passed to the `subplots` function.
-
-    Returns:
-        plt.Figure: The matplotlib Figure object containing the plot.
-
-    Raises:
-        None
-
-    Example:
-        df = pd.DataFrame({
-            "sequence": ["ACGU", "UGCA", "CGAU"],
-            "data": [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]],
-            "rna_name": ["RNA1", "RNA2", "RNA3"]
-        })
-        fig = plot_pop_avg_all(df, data_col="data")
-        plt.show()
-    """
-    fig, axes = plt.subplots(len(df), 1, **kwargs)
-    j = 0
-    for i, row in df.iterrows():
-        colors = colors_for_sequence(row["sequence"])
-        axes[j].bar(range(0, len(row[data_col])), row[data_col], color=colors)
-        axes[j].set_title(row["rna_name"])
-        j += 1
-    plot_pop_avg_from_row(df.iloc[-1], ax=axes[-1])
-    return fig
-
-
-def plot_pop_avg_traces_all(df: pd.DataFrame, label_col="rna_name", **kwargs):
-    """
-    Plots population average traces for all RNA names in the given DataFrame.
-
-    Args:
-        df (pandas.DataFrame): The DataFrame containing the data to be plotted.
-        **kwargs: Additional keyword arguments to be passed to the plt.subplots() function.
-
-    Returns:
-        matplotlib.figure.Figure: The generated figure object.
-
-    """
-    fig, ax = plt.subplots(1, 1, **kwargs)
-    for i, row in df.iterrows():
-        plt.plot(row["data"], label=row[label_col])
-    fig.legend(loc="upper left")
-    return fig
 
 
 def create_figure_with_layout(layout, **kwargs):
@@ -242,3 +251,49 @@ def create_figure_with_layout(layout, **kwargs):
         axes.append(ax)
 
     return fig, axes
+
+
+def load_and_fit_image_to_subplot(image_path, ax):
+    """
+    Load an image from file and stretch it to fit in a subplot.
+
+    Parameters:
+    -----------
+    image_path : str
+        Path to the image file
+    subplot_coords : tuple
+        Subplot coordinates as (left, bottom, width, height) in figure-relative units
+    fig : matplotlib.figure.Figure
+        The figure object
+    ax : matplotlib.axes.Axes
+        The axes object where the image will be placed
+
+    Returns:
+    --------
+    matplotlib.image.AxesImage
+        The image object that was added to the subplot
+    """
+
+    # Load the image
+    try:
+        img = mpimg.imread(image_path)
+    except Exception as e:
+        raise ValueError(f"Could not load image from {image_path}: {e}")
+
+    # Clear the axes
+    ax.clear()
+
+    # Display the image stretched to fit the subplot
+    img_plot = ax.imshow(img)
+
+    # Remove axes ticks and labels
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+
+    # Remove spines
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    return img_plot

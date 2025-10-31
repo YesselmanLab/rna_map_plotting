@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 
 from yplot.logger import get_logger
+from yplot.style import publication_style_ax
 
 log = get_logger("util")
 
@@ -352,9 +353,9 @@ def render_example_figure(coords, fig_size_inches, grid_layout=None, section_inf
             spine.set_edgecolor("black")
             spine.set_linewidth(0.5)
 
-        # Remove ticks for cleaner look
-        ax.set_xticks([])
-        ax.set_yticks([])
+        ax.set_xlabel("X Label", labelpad=2)
+        ax.set_ylabel("Y Label", labelpad=2)
+        publication_style_ax(ax)
 
     return fig
 

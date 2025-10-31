@@ -1,4 +1,5 @@
 test_figures
+real_figures
 *.py[cod]
 .DS_Store
 
