@@ -9,7 +9,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 from yplot.logger import get_logger
-from yplot.figure import SubplotLayout, calculate_subplot_coordinates
+from yplot.figure import SubplotLayout
 
 log = get_logger("plotting")
 
@@ -216,38 +216,19 @@ def create_figure_with_layout(layout, **kwargs):
 
     Examples:
     ---------
-    # Using SubplotLayout object
-    layout = SubplotLayout(fig_size_inches=(10, 8), rows=2, cols=3)
-    fig, axes = create_figure_with_layout(layout)
-
     # From dictionary
     config = {'fig_size': [10, 8], 'rows': 2, 'cols': 3, 'row_heights': [3.0, 2.0]}
     fig, axes = create_figure_with_layout(config)
 
-    # From YAML file
-    fig, axes = create_figure_with_layout('my_layout.yaml')
     """
-    # Convert to SubplotLayout object if needed
-    if not isinstance(layout, SubplotLayout):
-        if isinstance(layout, (str, Path)):
-            layout = SubplotLayout(yaml_file=layout)
-        elif isinstance(layout, dict):
-            layout = SubplotLayout(config=layout)
-        else:
-            raise TypeError(
-                "layout must be a SubplotLayout object, dictionary, or YAML file path"
-            )
-
     # Get coordinates from layout
-    coords = calculate_subplot_coordinates(layout)
-
+    coords = layout.get_final_coordinates()
     # Create figure
     fig = plt.figure(figsize=layout.fig_size_inches, **kwargs)
-
     # Create axes for each subplot
     axes = []
-    for i, (left, bottom, width, height) in enumerate(coords):
-        ax = fig.add_axes([left, bottom, width, height])
+    for coord in coords:
+        ax = fig.add_axes(coord)
         axes.append(ax)
 
     return fig, axes

@@ -2,7 +2,7 @@
 Streamlined subplot layout configuration system.
 
 This module provides a clean, focused interface for creating subplot layouts
-with support for both standard grid layouts and row-based configurations.
+using row-based configurations.
 """
 
 import yaml
@@ -15,294 +15,65 @@ class SubplotLayout:
     """
     Streamlined subplot layout configuration class.
 
-    Supports two configuration formats:
-    1. Standard grid: fig_size, rows, cols, row_heights, col_widths, etc.
-    2. Row-based: fig_size + row_1, row_2, etc. (for complex layouts)
+    Supports row-based configuration with dictionary format.
 
     Parameters:
     -----------
-    config : dict, optional
-        Configuration dictionary. Can use either standard or row-based format.
-    fig_size_inches : tuple, optional
-        Figure size as (width, height) in inches (for direct initialization)
-    rows : int, optional
-        Number of rows in the subplot grid (for direct initialization)
-    cols : int, optional
-        Number of columns in the subplot grid (for direct initialization)
-    size : list of tuples, optional
-        List of (width, height) tuples for each column. If provided, overrides
-        col_widths and row_heights for individual column sizing.
-    **kwargs
-        Additional parameters for direct initialization
+    config : dict
+        Configuration dictionary with fig_size and row definitions.
 
     Examples:
     ---------
-    # Row-based configuration (preferred for complex layouts)
+    # Row-based configuration
     layout_dict = {
-        "fig_size": (7, 2),
+        "fig_size": (7, 8.0),
         "row_1": {
-            "size": (1.3, 1.3),
-            "hspace": 0.45,
-            "wspace": 0.50,
-            "margins": {"left": 0.40, "right": 0.0, "top": 0.0, "bottom": 0.50},
-            "cols": 4
-        }
+            "size": (2.9, 2.5),
+            "spacing": {"hspace": 0.70, "wspace": 0.40},
+            "margins": {"left": 0.40, "right": 0.0, "top": 0.0, "bottom": 0.30},
+            "cols": 2,
+            "image": [0, 1],
+        },
+        "row_2": {
+            "size": (2.9, 1.2),
+            "spacing": {"hspace": 0.70, "wspace": 0.40},
+            "margins": {"left": 0.40, "right": 0.0, "top": 0.0, "bottom": 0.30},
+            "cols": 2,
+        },
     }
     layout = SubplotLayout(config=layout_dict)
-
-    # Standard grid configuration
-    layout = SubplotLayout(
-        fig_size_inches=(10, 8),
-        rows=2,
-        cols=3,
-        row_heights=[3.0, 2.0],
-        col_widths=[2.5, 2.5, 2.5]
-    )
-
-    # Column-based sizing with size parameter
-    layout = SubplotLayout(
-        fig_size_inches=(10, 8),
-        rows=2,
-        cols=3,
-        size=[(2.0, 3.0), (2.5, 2.5), (2.0, 2.0)]  # (width, height) for each column
-    )
     """
 
     def __init__(
         self,
         config: Optional[Dict] = None,
-        fig_size_inches: Optional[Tuple[float, float]] = None,
-        rows: Optional[int] = None,
-        cols: Optional[int] = None,
-        **kwargs,
+        yaml_file: Optional[Union[str, Path]] = None,
     ):
-        # Initialize with defaults
-        self.fig_size_inches = None
-        self.rows = None
-        self.cols = None
-        self.row_heights = []
-        self.col_widths = []
-        self.col_sizes = []  # New: (width, height) tuples for each column
-        self.wspace = []
-        self.hspace = []
-        self.margins = {"left": 0.75, "right": 0.75, "top": 0.75, "bottom": 0.75}
-        self.subplot_info = None
-        self.is_row_based = False
+        """Initialize from configuration dictionary or YAML file."""
+        if yaml_file is not None:
+            yaml_path = Path(yaml_file)
+            if not yaml_path.exists():
+                raise FileNotFoundError(f"YAML file not found: {yaml_path}")
+            with open(yaml_path, "r") as f:
+                config = yaml.safe_load(f)
 
-        # Handle different initialization methods
-        if config is not None:
-            self._load_from_config(config)
-        elif fig_size_inches is not None and rows is not None and cols is not None:
-            self._load_from_parameters(fig_size_inches, rows, cols, **kwargs)
-        else:
-            raise ValueError(
-                "Must provide either config dict or fig_size_inches+rows+cols"
-            )
+        if config is None:
+            raise ValueError("Must provide either config or yaml_file")
 
-    def _load_from_config(self, config: Dict):
-        """Load configuration from dictionary."""
-        # Check if this is a row-based configuration
-        row_keys = [k for k in config.keys() if k.startswith("row_")]
-        has_traditional_keys = "rows" in config or "cols" in config
+        # Validate fig_size
+        if "fig_size" not in config:
+            raise ValueError("Configuration must contain 'fig_size' key")
 
-        if row_keys and not has_traditional_keys:
-            # Row-based configuration
-            self.is_row_based = True
-            self.fig_size_inches = tuple(
-                config.get("fig_size", config.get("fig_size_inches", (7, 4)))
-            )
-            self.subplot_info = config
-            self.rows = len(row_keys)
-            self.cols = None  # Will be determined from row configs
-            self.margins = config.get(
-                "margins", {"left": 0.00, "right": 0.00, "top": 0.00, "bottom": 0.00}
-            )
-            # Validate that all provided parameters are recognized
-            self._validate_config_parameters(config)
-            return
+        self.fig_size_inches = tuple(config["fig_size"])
+        self.subplot_info = config
+        self.rows = len([k for k in config.keys() if k.startswith("row_")])
 
-        # Standard configuration
-        self.is_row_based = False
-        if "fig_size" in config:
-            self.fig_size_inches = tuple(config["fig_size"])
-        elif "fig_size_inches" in config:
-            self.fig_size_inches = tuple(config["fig_size_inches"])
-        else:
-            raise ValueError(
-                "Configuration must contain 'fig_size' or 'fig_size_inches'"
-            )
+        if self.rows == 0:
+            raise ValueError("Configuration must contain at least one 'row_X' key")
 
-        self.rows = config.get("rows", 1)
-        self.cols = config.get("cols", 1)
-
-        # Set default values
-        self.row_heights = config.get("row_heights", [2.0] * self.rows)
-
-        # Handle column sizing - check for size parameter first, then col_widths
-        col_sizes = config.get("size")
-        if col_sizes is not None:
-            # Use size parameter - each element should be (width, height)
-            if len(col_sizes) != self.cols:
-                raise ValueError(
-                    f"size must have {self.cols} elements, got {len(col_sizes)}"
-                )
-            # Validate that each element is a tuple/list of length 2
-            for i, size in enumerate(col_sizes):
-                if not isinstance(size, (tuple, list)) or len(size) != 2:
-                    raise ValueError(
-                        f"size[{i}] must be a tuple/list of (width, height), got {size}"
-                    )
-            self.col_sizes = col_sizes
-            # Extract widths for backward compatibility
-            self.col_widths = [size[0] for size in col_sizes]
-        else:
-            # Use traditional col_widths parameter
-            self.col_widths = config.get("col_widths", [2.0] * self.cols)
-            self.col_sizes = []  # Not using size parameter
-
-        self.wspace = config.get(
-            "wspace", [0.5] * (self.rows - 1) if self.rows > 1 else []
-        )
-        self.hspace = config.get(
-            "hspace", [0.5] * (self.cols - 1) if self.cols > 1 else []
-        )
-        self.margins = config.get("margins", self.margins)
-
-        # Validate that all provided parameters are recognized
-        self._validate_config_parameters(config)
-
-    def _load_from_parameters(
-        self, fig_size_inches: Tuple[float, float], rows: int, cols: int, **kwargs
-    ):
-        """Load configuration from direct parameters."""
-        self.is_row_based = False
-        self.fig_size_inches = tuple(fig_size_inches)
-        self.rows = rows
-        self.cols = cols
-
-        # Set row heights
-        row_heights = kwargs.get("row_heights")
-        if row_heights is not None:
-            if len(row_heights) != rows:
-                raise ValueError(
-                    f"row_heights must have {rows} elements, got {len(row_heights)}"
-                )
-            self.row_heights = row_heights
-        else:
-            self.row_heights = [2.0] * rows
-
-        # Set column widths or sizes
-        col_widths = kwargs.get("col_widths")
-        col_sizes = kwargs.get("size")  # New parameter for (width, height) tuples
-
-        if col_sizes is not None:
-            # Use size parameter - each element should be (width, height)
-            if len(col_sizes) != cols:
-                raise ValueError(
-                    f"size must have {cols} elements, got {len(col_sizes)}"
-                )
-            # Validate that each element is a tuple/list of length 2
-            for i, size in enumerate(col_sizes):
-                if not isinstance(size, (tuple, list)) or len(size) != 2:
-                    raise ValueError(
-                        f"size[{i}] must be a tuple/list of (width, height), got {size}"
-                    )
-            self.col_sizes = col_sizes
-            # Extract widths for backward compatibility
-            self.col_widths = [size[0] for size in col_sizes]
-        elif col_widths is not None:
-            # Use traditional col_widths parameter
-            if len(col_widths) != cols:
-                raise ValueError(
-                    f"col_widths must have {cols} elements, got {len(col_widths)}"
-                )
-            self.col_widths = col_widths
-            self.col_sizes = []  # Not using size parameter
-        else:
-            self.col_widths = [2.0] * cols
-            self.col_sizes = []  # Not using size parameter
-
-        # Set vertical spacing (between rows)
-        wspace = kwargs.get("wspace")
-        if wspace is not None:
-            if rows > 1 and len(wspace) != rows - 1:
-                raise ValueError(
-                    f"wspace must have {rows - 1} elements, got {len(wspace)}"
-                )
-            self.wspace = wspace
-        else:
-            self.wspace = [0.5] * (rows - 1) if rows > 1 else []
-
-        # Set horizontal spacing (between columns)
-        hspace = kwargs.get("hspace")
-        if hspace is not None:
-            if cols > 1 and len(hspace) != cols - 1:
-                raise ValueError(
-                    f"hspace must have {cols - 1} elements, got {len(hspace)}"
-                )
-            self.hspace = hspace
-        else:
-            self.hspace = [0.5] * (cols - 1) if cols > 1 else []
-
-        # Set margins
-        margins = kwargs.get("margins")
-        if margins is not None:
-            self.margins = margins
-
-    def _validate_config_parameters(self, config: Dict):
-        """Validate that all provided configuration parameters are recognized."""
-        # Define all valid parameters for standard configuration
-        valid_standard_params = {
-            "fig_size",
-            "fig_size_inches",
-            "rows",
-            "cols",
-            "row_heights",
-            "col_widths",
-            "size",
-            "wspace",
-            "hspace",
-            "margins",
-        }
-
-        # Define all valid parameters for row-based configuration
-        valid_row_based_params = {"fig_size", "fig_size_inches", "margins"}
-
-        # Get the parameters that were actually provided
-        provided_params = set(config.keys())
-
-        if self.is_row_based:
-            # For row-based config, check for row_X keys and other valid params
-            row_keys = {k for k in provided_params if k.startswith("row_")}
-            other_params = provided_params - row_keys
-
-            # Check if any non-row parameters are invalid
-            invalid_params = other_params - valid_row_based_params
-            if invalid_params:
-                raise ValueError(
-                    f"Unrecognized parameters in row-based configuration: {sorted(invalid_params)}. "
-                    f"Valid parameters are: {sorted(valid_row_based_params | {'row_X'})}"
-                )
-        else:
-            # For standard config, check against valid parameters
-            invalid_params = provided_params - valid_standard_params
-            if invalid_params:
-                raise ValueError(
-                    f"Unrecognized parameters in configuration: {sorted(invalid_params)}. "
-                    f"Valid parameters are: {sorted(valid_standard_params)}"
-                )
-
-    def get_coordinates(
-        self, cols_per_row: Optional[List[int]] = None
-    ) -> List[Tuple[float, float, float, float]]:
+    def get_coordinates(self) -> List[Tuple[float, float, float, float]]:
         """
         Calculate subplot coordinates based on the configuration.
-
-        Parameters:
-        -----------
-        cols_per_row : list, optional
-            Number of columns in each row. If None, uses uniform grid.
-            If provided, allows different numbers of subplots per row.
 
         Returns:
         --------
@@ -310,10 +81,7 @@ class SubplotLayout:
             List of tuples, each containing (left, bottom, width, height) coordinates
             in figure-relative units (0-1) for each subplot, ordered row by row.
         """
-        if self.is_row_based:
-            return self._calculate_row_based_coordinates()
-        else:
-            return self._calculate_standard_coordinates(cols_per_row)
+        return self._calculate_row_based_coordinates()
 
     def _calculate_row_based_coordinates(
         self,
@@ -338,8 +106,17 @@ class SubplotLayout:
             # Extract row information
             cols = row_data["cols"]
             size = row_data["size"]
-            hspace = row_data.get("hspace", 0.3)
-            wspace = row_data.get("wspace", 0.3)
+
+            # Handle spacing - can be dict or individual values
+            spacing = row_data.get("spacing", {})
+            if isinstance(spacing, dict):
+                hspace = spacing.get("hspace", 0.3)
+                wspace = spacing.get("wspace", 0.3)
+            else:
+                # Backward compatibility
+                hspace = row_data.get("hspace", 0.3)
+                wspace = row_data.get("wspace", 0.3)
+
             margins = row_data.get(
                 "margins", {"left": 0.00, "right": 0.00, "top": 0.00, "bottom": 0.00}
             )
@@ -423,125 +200,67 @@ class SubplotLayout:
 
         return coordinates
 
-    def _calculate_standard_coordinates(
-        self, cols_per_row: Optional[List[int]] = None
-    ) -> List[Tuple[float, float, float, float]]:
-        """Calculate coordinates using standard grid configuration."""
-        fig_width, fig_height = self.fig_size_inches
+    def get_final_coordinates(self) -> List[Tuple[float, float, float, float]]:
+        """
+        Get coordinates with expansion applied for image subplots.
 
-        # Use uniform grid if cols_per_row not provided
-        if cols_per_row is None:
-            cols_per_row = [self.cols] * self.rows
+        Returns:
+        --------
+        list
+            List of tuples with final coordinates (left, bottom, width, height).
+        """
+        from yplot.layout_utils import expand_subplot_coordinates
 
-        # Validate list lengths
-        if len(self.row_heights) != self.rows:
-            raise ValueError(
-                f"row_heights must have {self.rows} elements, got {len(self.row_heights)}"
-            )
-        if len(cols_per_row) != self.rows:
-            raise ValueError(
-                f"cols_per_row must have {self.rows} elements, got {len(cols_per_row)}"
-            )
-        if self.rows > 1 and len(self.wspace) != self.rows - 1:
-            raise ValueError(
-                f"wspace must have {self.rows - 1} elements, got {len(self.wspace)}"
-            )
+        coords = self.get_coordinates()
+        final_coords = []
 
-        # Calculate total space needed
-        total_subplot_height = sum(self.row_heights)
-        total_wspace = sum(self.wspace)
-        total_margins_height = self.margins["top"] + self.margins["bottom"]
+        row_keys = sorted([k for k in self.subplot_info.keys() if k.startswith("row_")])
+        coord_idx = 0
 
-        # For width calculation, we need to consider the maximum number of columns
-        max_cols = max(cols_per_row)
-        if len(self.col_widths) != max_cols:
-            raise ValueError(
-                f"col_widths must have {max_cols} elements, got {len(self.col_widths)}"
-            )
+        for row_key in row_keys:
+            row_data = self.subplot_info[row_key]
+            image_flag = row_data.get("image", False)
+            num_cols = row_data.get("cols", 1)
 
-        # Calculate total width needed (using max columns for validation)
-        total_subplot_width = sum(self.col_widths)
-        total_hspace = sum(self.hspace) if len(self.hspace) > 0 else 0
-        total_margins_width = self.margins["left"] + self.margins["right"]
+            # Handle different image flag formats
+            if isinstance(image_flag, bool):
+                # Boolean: all columns in row are images
+                is_image_list = [image_flag] * num_cols
+            elif isinstance(image_flag, list):
+                # List: specific columns are images
+                is_image_list = [i in image_flag for i in range(num_cols)]
+            else:
+                # Default: no images
+                is_image_list = [False] * num_cols
 
-        required_width = total_subplot_width + total_hspace + total_margins_width
-        required_height = total_subplot_height + total_wspace + total_margins_height
+            for i in range(num_cols):
+                if is_image_list[i] and coord_idx < len(coords):
+                    # Expand this coordinate
+                    # Get spacing from the row data
+                    spacing = row_data.get("spacing", {})
+                    if isinstance(spacing, dict):
+                        hspace = spacing.get("hspace", 0.5)
+                        wspace = spacing.get("wspace", 0.5)
+                    else:
+                        hspace = row_data.get("hspace", 0.5)
+                        wspace = row_data.get("wspace", 0.5)
 
-        # Warn if layout doesn't fit
-        if required_width > fig_width or required_height > fig_height:
-            warnings.warn(
-                f"Subplot layout requires {required_width:.2f}x{required_height:.2f} inches "
-                f"but figure is {fig_width:.2f}x{fig_height:.2f} inches. Subplots may overlap."
-            )
-
-        # Calculate coordinates
-        coordinates = []
-
-        # Calculate cumulative positions for rows (from bottom to top)
-        row_bottoms = []
-        current_bottom = self.margins["bottom"]
-        for row in range(self.rows - 1, -1, -1):  # Start from bottom row
-            row_bottoms.insert(0, current_bottom)  # Insert at beginning
-            current_bottom += self.row_heights[row]
-            if row > 0:  # Add spacing if not the top row
-                current_bottom += self.wspace[row - 1]
-
-        # Generate coordinates for each subplot
-        for row in range(self.rows):
-            num_cols_in_row = cols_per_row[row]
-
-            # Calculate column positions for this row
-            col_lefts = []
-            current_left = self.margins["left"]
-            for col in range(num_cols_in_row):
-                col_lefts.append(current_left)
-                current_left += self.col_widths[col]
-                if col < num_cols_in_row - 1:  # Add spacing if not the last column
-                    current_left += self.hspace[col] if col < len(self.hspace) else 0
-
-            # Generate coordinates for subplots in this row
-            for col in range(num_cols_in_row):
-                left_inches = col_lefts[col]
-                bottom_inches = row_bottoms[row]
-                width_inches = self.col_widths[col]
-
-                # Use height from col_sizes if available, otherwise use row_heights
-                if self.col_sizes and col < len(self.col_sizes):
-                    height_inches = self.col_sizes[col][
-                        1
-                    ]  # Use height from (width, height) tuple
+                    expanded = expand_subplot_coordinates(
+                        coords[coord_idx],
+                        self.fig_size_inches,
+                        margins=row_data.get("margins"),
+                        spacing={"hspace": hspace, "wspace": wspace},
+                    )
+                    final_coords.append(expanded)
                 else:
-                    height_inches = self.row_heights[row]
+                    final_coords.append(coords[coord_idx])
+                coord_idx += 1
 
-                # Convert to figure-relative coordinates (0-1)
-                left_rel = left_inches / fig_width
-                bottom_rel = bottom_inches / fig_height
-                width_rel = width_inches / fig_width
-                height_rel = height_inches / fig_height
-
-                coordinates.append((left_rel, bottom_rel, width_rel, height_rel))
-
-        return coordinates
+        return final_coords
 
     def to_dict(self) -> Dict:
         """Convert configuration to a dictionary."""
-        if self.is_row_based:
-            return self.subplot_info
-        else:
-            result = {
-                "fig_size": list(self.fig_size_inches),
-                "rows": self.rows,
-                "cols": self.cols,
-                "row_heights": self.row_heights,
-                "col_widths": self.col_widths,
-                "wspace": self.wspace,
-                "hspace": self.hspace,
-                "margins": self.margins,
-            }
-            # Include col_sizes if it was used
-            if self.col_sizes:
-                result["size"] = self.col_sizes
-            return result
+        return self.subplot_info
 
     def to_yaml(self, yaml_file: Union[str, Path]):
         """Save configuration to YAML file."""
@@ -550,68 +269,3 @@ class SubplotLayout:
 
         with open(yaml_path, "w") as f:
             yaml.dump(self.to_dict(), f, default_flow_style=False, indent=2)
-
-    @classmethod
-    def from_yaml(cls, yaml_file: Union[str, Path]):
-        """Load configuration from YAML file."""
-        yaml_path = Path(yaml_file)
-        if not yaml_path.exists():
-            raise FileNotFoundError(f"YAML file not found: {yaml_path}")
-
-        with open(yaml_path, "r") as f:
-            config = yaml.safe_load(f)
-
-        return cls(config=config)
-
-
-# Convenience function for backward compatibility
-def calculate_subplot_coordinates(
-    layout: SubplotLayout, cols_per_row: Optional[List[int]] = None
-) -> List[Tuple[float, float, float, float]]:
-    """
-    Calculate subplot coordinates from a SubplotLayout configuration.
-
-    This is a convenience wrapper function that calls the get_coordinates method
-    on a SubplotLayout object.
-
-    Parameters:
-    -----------
-    layout : SubplotLayout
-        SubplotLayout object containing the configuration
-    cols_per_row : list, optional
-        Number of columns in each row. If None, uses uniform grid.
-        If provided, allows different numbers of subplots per row.
-
-    Returns:
-    --------
-    list
-        List of tuples, each containing (left, bottom, width, height) coordinates
-        in figure-relative units (0-1) for each subplot, ordered row by row.
-    """
-    return layout.get_coordinates(cols_per_row)
-
-
-# Convenience function for backward compatibility
-def generate_subplot_coordinates_from_dict(
-    config: Dict,
-) -> List[Tuple[float, float, float, float]]:
-    """
-    Generate subplot coordinates from a dictionary configuration.
-
-    This function provides a clean interface for generating subplot coordinates
-    directly from a dictionary without needing to create a SubplotLayout object.
-
-    Parameters:
-    -----------
-    config : dict
-        Configuration dictionary. Can use either the row-based format (row_1, row_2, etc.)
-        or the standard format with rows, cols, etc.
-
-    Returns:
-    --------
-    list
-        List of tuples, each containing (left, bottom, width, height) coordinates
-        in figure-relative units (0-1) for each subplot
-    """
-    layout = SubplotLayout(config=config)
-    return layout.get_coordinates()

@@ -13,6 +13,4 @@ from yplot.util import (
 )
 from yplot.figure import (
     SubplotLayout,
-    calculate_subplot_coordinates,
-    generate_subplot_coordinates_from_dict,
 )
