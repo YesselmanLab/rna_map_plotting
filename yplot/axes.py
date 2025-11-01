@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List, Union
+from typing import List, Union, Tuple, Optional, Sequence
+from matplotlib.ticker import FixedLocator, LogLocator, FuncFormatter
 
 
 def sequence_and_structure_x_axis(
@@ -97,3 +98,43 @@ def add_custom_ticks(
         raise ValueError("axis must be 'x' or 'y'")
 
     return ax
+
+
+def compute_eps_and_xplot(
+    x: np.ndarray, epsilon_factor: float = 0.1
+) -> Tuple[float, np.ndarray, np.ndarray]:
+    pos = x[x > 0]
+    if pos.size == 0:
+        raise ValueError("All x values are zero; cannot use log scale.")
+    eps = epsilon_factor * float(np.min(pos))
+    x_plot = x.copy()
+    x_plot[x_plot <= 0] = eps
+    return eps, pos, x_plot
+
+
+def log_axis_with_zero(
+    ax,
+    eps: float,
+    pos: np.ndarray,
+    decade_ticks: Optional[Sequence[float]] = None,
+    left_pad: float = 1.5,
+    right_pad: float = 1.5,
+) -> None:
+    ax.set_xscale("log")
+
+    if decade_ticks is None:
+        lo_pow = int(np.floor(np.log10(max(eps, float(np.min(pos)) * 0.8))))
+        hi_pow = int(np.ceil(np.log10(float(np.max(pos)) * 1.2)))
+        decade_ticks = [10.0**p for p in range(lo_pow, hi_pow + 1)]
+
+    tick_positions = [eps] + [
+        t for t in decade_ticks if eps <= t <= float(np.max(pos)) * 1.05
+    ]
+    ax.xaxis.set_major_locator(FixedLocator(tick_positions))
+
+    def _fmt_tick(val, _pos=None):
+        return "0" if np.isclose(val, eps) else f"{val:g}"
+
+    ax.xaxis.set_major_formatter(FuncFormatter(_fmt_tick))
+    # ax.xaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10)))
+    ax.set_xlim(eps / left_pad, float(np.max(pos)) * right_pad)

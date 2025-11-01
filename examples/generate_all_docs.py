@@ -296,21 +296,26 @@ def generate_all_examples():
     for i, example in enumerate(all_examples, 1):
         print(f"\nGenerating {example['name']}...")
         try:
-            coords = example['function']()
+            # The function returns a SubplotLayout object now
+            layout_obj = example.get('layout_obj')
+            if layout_obj is None:
+                # Skip examples that don't have a layout object
+                coords = example['function']()
+                print(f"⚠ Skipping example without layout_obj: {example['name']}")
+                continue
+                
             filepath = create_example_figure(
-                coords, 
+                layout_obj, 
                 f"{example['name']} ({example['layout'][0]}×{example['layout'][1]})",
                 example['filename'],
-                example['fig_size'],
-                grid_layout=example['layout'],
                 output_dir='docs/figures'
             )
             results.append({
                 'example': example,
                 'filepath': filepath,
-                'coords': coords
+                'coords': layout_obj.get_coordinates()
             })
-            print(f"✓ Generated {len(coords)} subplot coordinates")
+            print(f"✓ Generated figure with {len(layout_obj.get_coordinates())} subplot coordinates")
         except Exception as e:
             print(f"✗ Failed: {e}")
             results.append({
