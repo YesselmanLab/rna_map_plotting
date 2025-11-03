@@ -124,7 +124,7 @@ def draw_box_around_figure(fig, linewidth=2, edgecolor="black", facecolor="none"
     fig.patches.append(bbox)
 
 
-def draw_boxes_around_coords_list(fig, coords_list):
+def draw_boxes_around_subplots(fig, coords_list):
     """
     Draw a box around each set of subplot coordinates in coords_list,
     using a different color for each box.
@@ -231,7 +231,7 @@ def list_figure_layouts():
     return list(all_layouts.keys())
 
 
-def create_figure_with_true_size(width, height, verify=True):
+def create_figure_with_true_size(width, height, verify=False):
     """
     Create a figure and axes with the specified true (panel-only) size in inches.
 
