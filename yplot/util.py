@@ -231,7 +231,7 @@ def list_figure_layouts():
     return list(all_layouts.keys())
 
 
-def create_figure_with_true_size(width, height, verify=False):
+def create_figure_with_true_size(width, height, verify=False, dpi=100):
     """
     Create a figure and axes with the specified true (panel-only) size in inches.
 
@@ -248,7 +248,7 @@ def create_figure_with_true_size(width, height, verify=False):
     Returns:
         tuple: (fig, ax) matplotlib figure and axes objects.
     """
-    fig, ax = plt.subplots(figsize=(width, height))
+    fig, ax = plt.subplots(figsize=(width, height), dpi=dpi)
     # Remove any space/margins to ensure axes size matches figure size
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 

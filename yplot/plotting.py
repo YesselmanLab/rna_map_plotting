@@ -137,7 +137,8 @@ def scatter_plot_w_regression(
 ):
     # Prepare the data
     x, y = extract_xy(data, x, y)
-    x = x.reshape(-1, 1)
+    x = np.array(x).reshape(-1, 1)
+    y = np.array(y)
     if ax is None:
         _, ax = plt.subplots()
     ax.scatter(x, y, s=size)
