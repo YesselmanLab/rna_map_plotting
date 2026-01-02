@@ -76,6 +76,21 @@ from yplot.style import publication_style_ax, use
 # Utility functions
 from yplot.utils import colors_for_sequence, get_logger, setup_applevel_logger
 
+# DataFrame-first plotting API
+from yplot import plot
+
+# Annotations
+from yplot.annotate import (
+    add_significance,
+    add_pvalue,
+    significance_bracket,
+    star_notation,
+    add_arrow,
+    add_scale_bar,
+    add_callout,
+    add_text_box,
+)
+
 __all__ = [
     # Version info
     "__author__",
@@ -131,4 +146,15 @@ __all__ = [
     "expand_subplot_coordinates",
     "convert_coordinates_to_inches",
     "compute_eps_and_xplot",
+    # DataFrame plotting API
+    "plot",
+    # Annotations
+    "add_significance",
+    "add_pvalue",
+    "significance_bracket",
+    "star_notation",
+    "add_arrow",
+    "add_scale_bar",
+    "add_callout",
+    "add_text_box",
 ]
