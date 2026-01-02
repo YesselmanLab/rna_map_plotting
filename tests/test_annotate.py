@@ -13,6 +13,7 @@ from yplot.annotate import (
     add_text_box,
     significance_bracket,
     star_notation,
+    text,
 )
 from yplot.annotate.stats import add_regression_stats, add_significance_bars
 
@@ -206,3 +207,130 @@ class TestAddTextBox:
     def test_different_transforms(self):
         add_text_box(self.ax, 0.5, 0.5, "test", transform="data")
         assert len(self.ax.texts) == 1
+
+
+class TestText:
+    """Tests for text function."""
+
+    @pytest.fixture(autouse=True)
+    def setup_axes(self):
+        self.fig, self.ax = plt.subplots()
+        yield
+        plt.close(self.fig)
+
+    def test_top_left(self):
+        """Text at top left position."""
+        t = text(self.ax, "test", pos="top left")
+        assert t.get_text() == "test"
+        # Position is at anchor (0, 1), offset applied via transform
+        pos = t.get_position()
+        assert pos[0] == 0  # anchored at left edge
+        assert pos[1] == 1  # anchored at top edge
+
+    def test_top_right(self):
+        """Text at top right position."""
+        t = text(self.ax, "test", pos="top right")
+        pos = t.get_position()
+        assert pos[0] == 1  # anchored at right edge
+        assert pos[1] == 1  # anchored at top edge
+
+    def test_bottom_left(self):
+        """Text at bottom left position."""
+        t = text(self.ax, "test", pos="bottom left")
+        pos = t.get_position()
+        assert pos[0] == 0  # anchored at left edge
+        assert pos[1] == 0  # anchored at bottom edge
+
+    def test_bottom_right(self):
+        """Text at bottom right position."""
+        t = text(self.ax, "test", pos="bottom right")
+        pos = t.get_position()
+        assert pos[0] == 1  # anchored at right edge
+        assert pos[1] == 0  # anchored at bottom edge
+
+    def test_center(self):
+        """Text at center position."""
+        t = text(self.ax, "test", pos="center")
+        pos = t.get_position()
+        assert pos[0] == 0.5
+        assert pos[1] == 0.5
+
+    def test_aliases(self):
+        """Short aliases work."""
+        t1 = text(self.ax, "tl", pos="tl")
+        t2 = text(self.ax, "tr", pos="tr")
+        t3 = text(self.ax, "bl", pos="bl")
+        t4 = text(self.ax, "br", pos="br")
+        assert t1.get_position() == (0, 1)
+        assert t2.get_position() == (1, 1)
+        assert t3.get_position() == (0, 0)
+        assert t4.get_position() == (1, 0)
+
+    def test_above(self):
+        """Text above axes."""
+        t = text(self.ax, "test", pos="above")
+        pos = t.get_position()
+        # Anchored at top center, offset pushes it above
+        assert pos[0] == 0.5
+        assert pos[1] == 1  # anchor at top, offset moves it above
+
+    def test_below(self):
+        """Text below axes."""
+        t = text(self.ax, "test", pos="below")
+        pos = t.get_position()
+        assert pos[0] == 0.5
+        assert pos[1] == 0  # anchor at bottom, offset moves it below
+
+    def test_custom_position(self):
+        """Custom (x, y) tuple position."""
+        t = text(self.ax, "test", pos=(0.3, 0.7))
+        pos = t.get_position()
+        assert abs(pos[0] - 0.3) < 0.01
+        assert abs(pos[1] - 0.7) < 0.01
+
+    def test_fontsize(self):
+        """Custom fontsize."""
+        t = text(self.ax, "test", pos="center", fontsize=12)
+        assert t.get_fontsize() == 12
+
+    def test_box_false_by_default(self):
+        """Box is not added by default."""
+        t = text(self.ax, "test", pos="center")
+        assert t.get_bbox_patch() is None
+
+    def test_box_true(self):
+        """Box is added when box=True."""
+        t = text(self.ax, "test", pos="center", box=True)
+        assert t.get_bbox_patch() is not None
+
+    def test_kwargs_passed_through(self):
+        """Additional kwargs are passed to ax.text."""
+        t = text(self.ax, "test", pos="center", color="red", fontweight="bold")
+        assert t.get_color() == "red"
+        assert t.get_fontweight() == "bold"
+
+    def test_invalid_position_raises(self):
+        """Invalid position raises ValueError."""
+        with pytest.raises(ValueError, match="Unknown position"):
+            text(self.ax, "test", pos="invalid")
+
+    def test_custom_offset(self):
+        """Custom offset changes the point-based offset."""
+        # Just verify it runs without error - offset is in the transform
+        t = text(self.ax, "test", pos="top left", offset=10)
+        assert t.get_text() == "test"
+
+    def test_offset_independent_of_axes_size(self):
+        """Offset is in points, not relative to axes size."""
+        # Create two different sized axes
+        fig1, ax1 = plt.subplots(figsize=(4, 4))
+        fig2, ax2 = plt.subplots(figsize=(8, 8))
+
+        t1 = text(ax1, "test", pos="top left")
+        t2 = text(ax2, "test", pos="top left")
+
+        # Both should have same anchor position (offset is in transform)
+        assert t1.get_position() == t2.get_position()
+
+        plt.close(fig1)
+        plt.close(fig2)

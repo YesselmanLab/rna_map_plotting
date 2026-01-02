@@ -5,15 +5,27 @@ This module provides the main interface for defining and working
 with subplot layouts using a simple row-based configuration format.
 """
 
+import warnings
 from pathlib import Path
 from typing import Any, Optional, Union
 
+import re
+
 import yaml
+
+# Valid keys at the top level of the config
+VALID_TOP_LEVEL_KEYS = {"fig_size", "margins"}
+
+# Valid keys within a row definition
+VALID_ROW_KEYS = {"cols", "size", "spacing", "margins", "image", "hspace", "wspace"}
 
 from yplot.layout.coordinates import calculate_row_coordinates
 from yplot.layout.utils import expand_coordinates
 
 Coordinate = tuple[float, float, float, float]
+
+# Pattern to match range syntax: rows_1-10, row_1-5, rows_3:7
+RANGE_PATTERN = re.compile(r'^rows?_(\d+)[-:](\d+)$')
 
 
 class SubplotLayout:
@@ -65,11 +77,63 @@ class SubplotLayout:
             if not yaml_path.exists():
                 raise FileNotFoundError(f"YAML file not found: {yaml_path}")
             with open(yaml_path) as f:
-                return yaml.safe_load(f)
+                loaded = yaml.safe_load(f)
+                return self._expand_range_keys(loaded)
 
         if config is None:
             raise ValueError("Must provide either config or yaml_file")
-        return config
+        return self._expand_range_keys(config)
+
+    def _expand_range_keys(self, config: dict[str, Any]) -> dict[str, Any]:
+        """
+        Expand range syntax keys into individual row keys.
+
+        Supports patterns like:
+        - rows_1-10: expands to row_1 through row_10
+        - row_1-5: expands to row_1 through row_5
+        - rows_3:7: expands to row_3 through row_7
+
+        Args:
+            config: Configuration dictionary that may contain range keys.
+
+        Returns:
+            Configuration with range keys expanded to individual row_X keys.
+        """
+        expanded = {}
+        # Track which range keys produced which row keys for error messages
+        row_sources: dict[str, str] = {}
+
+        for key, value in config.items():
+            match = RANGE_PATTERN.match(key)
+            if match:
+                start, end = int(match.group(1)), int(match.group(2))
+                if start > end:
+                    raise ValueError(
+                        f"Invalid range '{key}': start ({start}) > end ({end})"
+                    )
+                for i in range(start, end + 1):
+                    row_key = f"row_{i}"
+                    if row_key in expanded:
+                        source = row_sources.get(row_key, row_key)
+                        raise ValueError(
+                            f"Duplicate row definition: '{row_key}' "
+                            f"(from '{key}' conflicts with '{source}')"
+                        )
+                    # Deep copy the value to avoid shared references
+                    expanded[row_key] = dict(value) if isinstance(value, dict) else value
+                    row_sources[row_key] = key
+            else:
+                # Check if this is a row_X key that conflicts with an expanded range
+                if key.startswith("row_") and key in expanded:
+                    source = row_sources.get(key, key)
+                    raise ValueError(
+                        f"Duplicate row definition: '{key}' "
+                        f"(conflicts with range '{source}')"
+                    )
+                expanded[key] = value
+                if key.startswith("row_"):
+                    row_sources[key] = key
+        return expanded
 
     def _validate_config(self, config: dict[str, Any]) -> None:
         """Validate configuration has required fields."""
@@ -77,6 +141,47 @@ class SubplotLayout:
             raise ValueError("Configuration must contain 'fig_size' key")
         if self._count_rows(config) == 0:
             raise ValueError("Configuration must contain at least one 'row_X' key")
+        self._warn_unknown_keys(config)
+
+    def _warn_unknown_keys(self, config: dict[str, Any]) -> None:
+        """Warn about unrecognized keys in the configuration."""
+        # Check top-level keys
+        for key in config.keys():
+            if key.startswith("row_"):
+                # Validate row-level keys
+                row_data = config[key]
+                if isinstance(row_data, dict):
+                    self._warn_unknown_row_keys(key, row_data)
+            elif key not in VALID_TOP_LEVEL_KEYS:
+                suggestion = self._suggest_key(key, VALID_TOP_LEVEL_KEYS)
+                msg = f"Unknown config key '{key}' will be ignored"
+                if suggestion:
+                    msg += f". Did you mean '{suggestion}'?"
+                warnings.warn(msg, UserWarning, stacklevel=4)
+
+    def _warn_unknown_row_keys(self, row_key: str, row_data: dict[str, Any]) -> None:
+        """Warn about unrecognized keys in a row definition."""
+        for key in row_data.keys():
+            if key not in VALID_ROW_KEYS:
+                suggestion = self._suggest_key(key, VALID_ROW_KEYS)
+                msg = f"Unknown key '{key}' in {row_key} will be ignored"
+                if suggestion:
+                    msg += f". Did you mean '{suggestion}'?"
+                warnings.warn(msg, UserWarning, stacklevel=5)
+
+    def _suggest_key(self, key: str, valid_keys: set[str]) -> Optional[str]:
+        """Suggest a valid key based on similarity to the provided key."""
+        key_lower = key.lower()
+        for valid in valid_keys:
+            # Check for common typos: missing 's', extra 's', similar spelling
+            if (
+                key_lower == valid.rstrip("s")  # margin -> margins
+                or key_lower == valid + "s"  # spacings -> spacing
+                or key_lower in valid  # col -> cols
+                or valid in key_lower  # columns -> cols
+            ):
+                return valid
+        return None
 
     def _count_rows(self, config: dict[str, Any]) -> int:
         """Count number of row definitions in config."""

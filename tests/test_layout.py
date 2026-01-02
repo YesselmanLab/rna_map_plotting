@@ -2,6 +2,7 @@
 
 import pytest
 import tempfile
+import warnings
 from pathlib import Path
 
 from yplot.layout import (
@@ -109,6 +110,118 @@ class TestSubplotLayout:
         })
         with pytest.raises(ValueError, match="'cols' and 'size'"):
             layout.get_coordinates()  # Validation happens when getting coords
+
+    def test_range_syntax_with_dash(self):
+        """Range syntax rows_1-3 expands to row_1, row_2, row_3."""
+        config = {
+            "fig_size": (7, 10),
+            "rows_1-3": {"cols": 2, "size": (2.5, 2.0)},
+        }
+        layout = SubplotLayout(config=config)
+        assert layout.rows == 3
+        coords = layout.get_coordinates()
+        assert len(coords) == 6  # 3 rows * 2 cols
+
+    def test_range_syntax_with_colon(self):
+        """Range syntax rows_1:3 expands to row_1, row_2, row_3."""
+        config = {
+            "fig_size": (7, 10),
+            "rows_1:3": {"cols": 2, "size": (2.5, 2.0)},
+        }
+        layout = SubplotLayout(config=config)
+        assert layout.rows == 3
+
+    def test_range_syntax_singular_form(self):
+        """Range syntax row_1-3 (singular) also works."""
+        config = {
+            "fig_size": (7, 10),
+            "row_1-3": {"cols": 2, "size": (2.5, 2.0)},
+        }
+        layout = SubplotLayout(config=config)
+        assert layout.rows == 3
+
+    def test_range_syntax_mixed_with_individual(self):
+        """Range syntax can be mixed with individual row definitions."""
+        config = {
+            "fig_size": (7, 15),
+            "rows_1-3": {"cols": 2, "size": (2.5, 2.0)},
+            "row_4": {"cols": 3, "size": (2.0, 2.5)},
+        }
+        layout = SubplotLayout(config=config)
+        assert layout.rows == 4
+        coords = layout.get_coordinates()
+        assert len(coords) == 9  # 3 rows * 2 cols + 1 row * 3 cols
+
+    def test_range_syntax_invalid_range_raises(self):
+        """Range with start > end raises ValueError."""
+        config = {
+            "fig_size": (7, 10),
+            "rows_5-3": {"cols": 2, "size": (2.5, 2.0)},
+        }
+        with pytest.raises(ValueError, match="start.*>.*end"):
+            SubplotLayout(config=config)
+
+    def test_range_syntax_duplicate_raises(self):
+        """Overlapping ranges raise ValueError."""
+        config = {
+            "fig_size": (7, 10),
+            "rows_1-3": {"cols": 2, "size": (2.5, 2.0)},
+            "row_2": {"cols": 3, "size": (2.0, 2.5)},
+        }
+        with pytest.raises(ValueError, match="Duplicate row"):
+            SubplotLayout(config=config)
+
+    def test_range_syntax_ten_rows(self):
+        """Range syntax works for 10 rows."""
+        config = {
+            "fig_size": (7, 25),
+            "rows_1-10": {"cols": 2, "size": (2.5, 2.0)},
+        }
+        layout = SubplotLayout(config=config)
+        assert layout.rows == 10
+        coords = layout.get_coordinates()
+        assert len(coords) == 20  # 10 rows * 2 cols
+
+    def test_warns_unknown_top_level_key(self):
+        """Warns when unknown top-level key is provided."""
+        config = {
+            "fig_size": (7, 5),
+            "margin": {"left": 0.4},  # typo: should be 'margins'
+            "row_1": {"cols": 2, "size": (2.5, 2.0)},
+        }
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            SubplotLayout(config=config)
+            assert len(w) == 1
+            assert "margin" in str(w[0].message)
+            assert "margins" in str(w[0].message)
+
+    def test_warns_unknown_row_key(self):
+        """Warns when unknown key is in row definition."""
+        config = {
+            "fig_size": (7, 5),
+            "row_1": {"cols": 2, "size": (2.5, 2.0), "col": 3},  # typo
+        }
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            SubplotLayout(config=config)
+            assert len(w) == 1
+            assert "col" in str(w[0].message)
+            assert "cols" in str(w[0].message)
+
+    def test_warns_unknown_key_no_suggestion(self):
+        """Warns without suggestion for completely unknown key."""
+        config = {
+            "fig_size": (7, 5),
+            "foo": "bar",
+            "row_1": {"cols": 2, "size": (2.5, 2.0)},
+        }
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            SubplotLayout(config=config)
+            assert len(w) == 1
+            assert "foo" in str(w[0].message)
+            assert "Did you mean" not in str(w[0].message)
 
 
 class TestConvertToInches:

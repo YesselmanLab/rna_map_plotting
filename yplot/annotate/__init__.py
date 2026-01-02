@@ -10,6 +10,7 @@ from yplot.annotate.elements import (
     add_callout,
     add_scale_bar,
     add_text_box,
+    text,
 )
 from yplot.annotate.stats import (
     add_pvalue,
@@ -29,4 +30,5 @@ __all__ = [
     "add_scale_bar",
     "add_callout",
     "add_text_box",
+    "text",
 ]
