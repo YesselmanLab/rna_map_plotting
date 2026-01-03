@@ -11,7 +11,7 @@ from yplot.config import rcParams
 
 PRESETS: dict[str, dict[str, Any]] = {
     "publication": {
-        "font.family": "Arial",
+        "font.family": "Arial Unicode MS",
         "font.size": 8,
         "axes.linewidth": 0.75,
         "axes.labelsize": 8,
@@ -26,7 +26,7 @@ PRESETS: dict[str, dict[str, Any]] = {
         "legend.fontsize": 8,
     },
     "presentation": {
-        "font.family": "Arial",
+        "font.family": "Arial Unicode MS",
         "font.size": 14,
         "axes.linewidth": 1.5,
         "axes.labelsize": 14,
@@ -41,7 +41,7 @@ PRESETS: dict[str, dict[str, Any]] = {
         "legend.fontsize": 12,
     },
     "poster": {
-        "font.family": "Arial",
+        "font.family": "Arial Unicode MS",
         "font.size": 18,
         "axes.linewidth": 2.0,
         "axes.labelsize": 18,

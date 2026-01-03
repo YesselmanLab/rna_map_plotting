@@ -89,6 +89,7 @@ from yplot.annotate import (
     add_scale_bar,
     add_callout,
     add_text_box,
+    text,
 )
 
 __all__ = [
@@ -157,4 +158,5 @@ __all__ = [
     "add_scale_bar",
     "add_callout",
     "add_text_box",
+    "text",
 ]

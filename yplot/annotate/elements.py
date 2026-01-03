@@ -93,8 +93,8 @@ def text(
         >>> text(ax, "Custom", pos=(0.5, 0.8))
         >>> text(ax, "More offset", pos="top left", offset=10)
     """
-    fontsize = fontsize or rcParams.get("font.size", 8)
-    fontfamily = kwargs.pop("fontfamily", None) or kwargs.pop("fontname", None) or rcParams.get("font.family", "Arial")
+    fontsize = fontsize or rcParams["font.size"]
+    fontfamily = kwargs.pop("fontfamily", None) or kwargs.pop("fontname", None) or rcParams["font.family"]
     fig = ax.get_figure()
 
     # Resolve position

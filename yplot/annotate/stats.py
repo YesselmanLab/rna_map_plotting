@@ -42,7 +42,7 @@ def add_significance(
     Example:
         >>> add_significance(ax, 0, 1, 0.95, pvalue=0.01)
     """
-    fontsize = fontsize or rcParams.get("font.size", 8)
+    fontsize = fontsize or rcParams["font.size"]
 
     # Get y range and calculate bracket positions
     y_range = ax.get_ylim()[1] - ax.get_ylim()[0]
@@ -89,7 +89,7 @@ def add_pvalue(
     Example:
         >>> add_pvalue(ax, 0.5, 0.9, 0.034)
     """
-    fontsize = fontsize or rcParams.get("font.size", 8)
+    fontsize = fontsize or rcParams["font.size"]
 
     if pvalue < 0.001:
         text = "p < 0.001"
@@ -218,7 +218,7 @@ def add_regression_stats(
     Example:
         >>> add_regression_stats(ax, r_squared=0.85, pvalue=0.001)
     """
-    fontsize = fontsize or rcParams.get("font.size", 8)
+    fontsize = fontsize or rcParams["font.size"]
 
     lines = [f"R² = {r_squared:.3f}"]
     if pvalue is not None:

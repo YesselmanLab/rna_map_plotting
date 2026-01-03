@@ -25,11 +25,11 @@ def publication_style_ax(
 
     Args:
         ax: The matplotlib Axes object to style.
-        fsize: Font size for labels/title. Defaults to rcParams['font.size'].
+        fsize: Font size for labels/title. Defaults to rcParams['axes.labelsize'].
         ytick_size: Y-axis tick label size. Defaults to rcParams['ytick.labelsize'].
         xtick_size: X-axis tick label size. Defaults to rcParams['xtick.labelsize'].
     """
-    fsize = fsize if fsize is not None else rcParams["font.size"]
+    fsize = fsize if fsize is not None else rcParams["axes.labelsize"]
     ytick_size = ytick_size if ytick_size is not None else rcParams["ytick.labelsize"]
     xtick_size = xtick_size if xtick_size is not None else rcParams["xtick.labelsize"]
 
@@ -47,10 +47,19 @@ def _apply_spine_style(ax: plt.Axes) -> None:
 
 def _apply_tick_style(ax: plt.Axes) -> None:
     """Apply tick styling to axes."""
+    # Apply x-tick styling
     ax.tick_params(
+        axis="x",
         width=rcParams["xtick.major.width"],
-        size=rcParams["xtick.major.size"],
+        length=rcParams["xtick.major.size"],
         pad=rcParams["xtick.major.pad"],
+    )
+    # Apply y-tick styling
+    ax.tick_params(
+        axis="y",
+        width=rcParams["ytick.major.width"],
+        length=rcParams["ytick.major.size"],
+        pad=rcParams["ytick.major.pad"],
     )
 
 
