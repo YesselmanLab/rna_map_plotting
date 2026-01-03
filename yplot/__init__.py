@@ -34,6 +34,7 @@ from yplot.figure import (
     add_ax_corner_text,
     add_subplot_labels,
     create_example_figure,
+    create_figure_with_grid,
     create_figure_with_layout,
     create_figure_with_true_size,
     draw_box_around_figure,
@@ -47,10 +48,15 @@ from yplot.figure import (
 # Layout system
 # Backward compatibility aliases
 from yplot.layout import (
+    AxisType,
+    GridCell,
+    GridLayout,
+    GridSpec,
     SubplotLayout,
     calculate_row_spacing,
     convert_coordinates_to_inches,
     convert_to_inches,
+    create_grid,
     expand_coordinates,
     expand_subplot_coordinates,
 )
@@ -105,10 +111,16 @@ __all__ = [
     "publication_style_ax",
     # Layout
     "SubplotLayout",
+    "GridLayout",
+    "GridSpec",
+    "GridCell",
+    "AxisType",
+    "create_grid",
     "expand_coordinates",
     "convert_to_inches",
     "calculate_row_spacing",
     # Figure
+    "create_figure_with_grid",
     "create_figure_with_layout",
     "create_figure_with_true_size",
     "add_subplot_labels",

@@ -5,10 +5,12 @@ This module provides functions for creating matplotlib figures
 using yplot's layout system.
 """
 
+from typing import Union
 
 import matplotlib.pyplot as plt
 
 from yplot.layout import SubplotLayout
+from yplot.layout.grid_layout import AxisType, GridLayout
 
 
 def create_figure_with_layout(
@@ -73,3 +75,48 @@ def create_figure_with_true_size(
         print(f"Axes panel size: {bbox.width:.2f} x {bbox.height:.2f} inches")
 
     return fig, ax
+
+
+def create_figure_with_grid(
+    layout: GridLayout,
+    apply_axis_types: bool = True,
+    **kwargs,
+) -> tuple[plt.Figure, list[plt.Axes]]:
+    """
+    Create a matplotlib figure using a GridLayout configuration.
+
+    Args:
+        layout: GridLayout object defining the figure layout.
+        apply_axis_types: If True, configure axes based on axis_type
+                         (hide ticks/spines for IMAGE type).
+        **kwargs: Additional keyword arguments passed to plt.figure().
+
+    Returns:
+        Tuple of (figure, list of axes).
+
+    Example:
+        >>> spec = GridSpec.uniform(3, 3, 2.5, 2.0)
+        >>> layout = GridLayout(spec)
+        >>> layout.add_cell(0, 0, colspan=3)
+        >>> fig, axes = create_figure_with_grid(layout)
+    """
+    coords = layout.get_final_coordinates()
+    axis_types = layout.get_axis_types()
+    fig = plt.figure(figsize=layout.fig_size_inches, **kwargs)
+
+    axes = []
+    for coord, axis_type in zip(coords, axis_types):
+        ax = fig.add_axes(coord)
+        if apply_axis_types and axis_type == AxisType.IMAGE:
+            _configure_axis_for_image(ax)
+        axes.append(ax)
+
+    return fig, axes
+
+
+def _configure_axis_for_image(ax: plt.Axes) -> None:
+    """Configure axis for image display (no ticks/spines)."""
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
