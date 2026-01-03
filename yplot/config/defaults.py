@@ -9,7 +9,7 @@ from typing import Any
 
 DEFAULT_PARAMS: dict[str, Any] = {
     # Font properties
-    "font.family": "Arial Unicode MS",
+    "font.family": "Arial",
     "font.size": 8,
     # Axes properties
     "axes.linewidth": 0.75,

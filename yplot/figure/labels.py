@@ -40,7 +40,7 @@ def add_subplot_labels(
     left_offset = left_offset or rcParams["subplot.label_left_offset"]
     top_offset = top_offset or rcParams["subplot.label_top_offset"]
     fontsize = fontsize or rcParams["subplot.label_fontsize"]
-
+ 
     letters = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
     start_idx = letters.index(start)
 

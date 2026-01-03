@@ -13,6 +13,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 from yplot.config import rcParams
+from yplot.annotate import text
 
 
 def plot_regression_line(
@@ -53,37 +54,7 @@ def plot_regression_line(
     )
 
     if show_r2:
-        _add_r2_annotation(ax, r2, r2_pos, r2_fontsize)
+        text(ax, f"R² = {r2:.2f}", pos=r2_pos, fontsize=r2_fontsize)
 
     return r2
 
-
-def _add_r2_annotation(
-    ax: plt.Axes,
-    r2: float,
-    pos: str,
-    fontsize: Optional[int],
-) -> None:
-    """Add R-squared annotation to axes."""
-    fontsize = fontsize or rcParams["corner_text.fontsize"]
-    font_family = rcParams["font.family"]
-
-    positions = {
-        "upper left": (0.03, 0.97, "top", "left"),
-        "upper right": (0.97, 0.97, "top", "right"),
-        "lower left": (0.03, 0.03, "bottom", "left"),
-        "lower right": (0.97, 0.03, "bottom", "right"),
-    }
-
-    if pos not in positions:
-        pos = "upper left"
-
-    x, y, va, ha = positions[pos]
-    ax.text(
-        x, y, f"R² = {r2:.2f}",
-        transform=ax.transAxes,
-        fontsize=fontsize,
-        fontname=font_family,
-        verticalalignment=va,
-        horizontalalignment=ha,
-    )

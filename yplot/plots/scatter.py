@@ -20,7 +20,7 @@ def scatter_plot_w_regression(
     ax: Optional[plt.Axes] = None,
     x: Optional[Union[str, np.ndarray]] = None,
     y: Optional[Union[str, np.ndarray]] = None,
-    pos: str = "upper left",
+    pos: str = "top left",
     size: Optional[float] = None,
     fontsize: Optional[int] = None,
 ) -> plt.Axes:
