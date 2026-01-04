@@ -99,14 +99,25 @@ def create_figure_with_grid(
         >>> layout = GridLayout(spec)
         >>> layout.add_cell(0, 0, colspan=3)
         >>> fig, axes = create_figure_with_grid(layout)
+
+        # With shared axes:
+        >>> layout.add_cell(0, 0, name="top")
+        >>> layout.add_cell(1, 0, sharex="top")  # Share x-axis with "top"
     """
     coords = layout.get_final_coordinates()
     axis_types = layout.get_axis_types()
+    share_info = layout.get_share_info()
     fig = plt.figure(figsize=layout.fig_size_inches, **kwargs)
 
     axes = []
-    for coord, axis_type in zip(coords, axis_types):
-        ax = fig.add_axes(coord)
+    for i, (coord, axis_type) in enumerate(zip(coords, axis_types)):
+        sharex_idx, sharey_idx = share_info[i]
+
+        # Get axes to share with (if specified and already created)
+        sharex_ax = axes[sharex_idx] if sharex_idx is not None else None
+        sharey_ax = axes[sharey_idx] if sharey_idx is not None else None
+
+        ax = fig.add_axes(coord, sharex=sharex_ax, sharey=sharey_ax)
         if apply_axis_types and axis_type == AxisType.IMAGE:
             _configure_axis_for_image(ax)
         axes.append(ax)

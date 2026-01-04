@@ -146,6 +146,388 @@ class GridSpec:
             margins=margins_tuple,
         )
 
+    @classmethod
+    def from_figsize(
+        cls,
+        figsize: tuple[float, float],
+        rows: int,
+        cols: int,
+        hgap: float = 0.3,
+        vgap: float = 0.4,
+        margins: Optional[dict[str, float]] = None,
+        col_ratios: Optional[list[float]] = None,
+        row_ratios: Optional[list[float]] = None,
+    ) -> "GridSpec":
+        """
+        Create grid with fixed figure size, calculating cell sizes automatically.
+
+        Args:
+            figsize: Total figure (width, height) in inches.
+            rows: Number of rows.
+            cols: Number of columns.
+            hgap: Horizontal gap between columns in inches.
+            vgap: Vertical gap between rows in inches.
+            margins: Dict with left, right, top, bottom margins.
+            col_ratios: Relative column widths (e.g., [1, 2, 1] for 1:2:1 ratio).
+                       If None, columns are equal width.
+            row_ratios: Relative row heights (e.g., [1, 2] for 1:2 ratio).
+                       If None, rows are equal height.
+
+        Returns:
+            GridSpec with cell sizes calculated to fit the figure size.
+
+        Example:
+            >>> # 7x5 inch figure with 2x3 grid
+            >>> spec = GridSpec.from_figsize((7, 5), rows=2, cols=3)
+            >>> assert spec.fig_width == 7.0
+            >>> assert spec.fig_height == 5.0
+
+            >>> # With non-uniform columns (1:2:1 ratio)
+            >>> spec = GridSpec.from_figsize((7, 5), rows=2, cols=3, col_ratios=[1, 2, 1])
+        """
+        fig_width, fig_height = figsize
+        margins_dict = margins or DEFAULT_MARGINS
+
+        # Calculate available space for cells
+        available_width = (
+            fig_width
+            - margins_dict["left"]
+            - margins_dict["right"]
+            - hgap * (cols - 1)
+        )
+        available_height = (
+            fig_height
+            - margins_dict["top"]
+            - margins_dict["bottom"]
+            - vgap * (rows - 1)
+        )
+
+        if available_width <= 0:
+            raise ValueError(
+                f"Figure width {fig_width} is too small for margins and gaps"
+            )
+        if available_height <= 0:
+            raise ValueError(
+                f"Figure height {fig_height} is too small for margins and gaps"
+            )
+
+        # Calculate column widths
+        if col_ratios is None:
+            col_widths = tuple([available_width / cols] * cols)
+        else:
+            if len(col_ratios) != cols:
+                raise ValueError(
+                    f"col_ratios length ({len(col_ratios)}) must match cols ({cols})"
+                )
+            total_ratio = sum(col_ratios)
+            col_widths = tuple(r / total_ratio * available_width for r in col_ratios)
+
+        # Calculate row heights
+        if row_ratios is None:
+            row_heights = tuple([available_height / rows] * rows)
+        else:
+            if len(row_ratios) != rows:
+                raise ValueError(
+                    f"row_ratios length ({len(row_ratios)}) must match rows ({rows})"
+                )
+            total_ratio = sum(row_ratios)
+            row_heights = tuple(r / total_ratio * available_height for r in row_ratios)
+
+        margins_tuple = tuple(margins_dict.items())
+        return cls(
+            col_widths=col_widths,
+            row_heights=row_heights,
+            hgap=hgap,
+            vgap=vgap,
+            margins=margins_tuple,
+        )
+
+    @classmethod
+    def from_width(
+        cls,
+        fig_width: float,
+        rows: int,
+        cols: int,
+        cell_height: float,
+        hgap: float = 0.3,
+        vgap: float = 0.4,
+        margins: Optional[dict[str, float]] = None,
+        col_ratios: Optional[list[float]] = None,
+    ) -> "GridSpec":
+        """
+        Create grid with fixed figure width, calculating column widths automatically.
+
+        Args:
+            fig_width: Total figure width in inches.
+            rows: Number of rows.
+            cols: Number of columns.
+            cell_height: Height of each cell in inches.
+            hgap: Horizontal gap between columns in inches.
+            vgap: Vertical gap between rows in inches.
+            margins: Dict with left, right, top, bottom margins.
+            col_ratios: Relative column widths. If None, columns are equal.
+
+        Returns:
+            GridSpec with column widths calculated to fit the figure width.
+
+        Example:
+            >>> spec = GridSpec.from_width(7.0, rows=2, cols=3, cell_height=2.0)
+            >>> assert spec.fig_width == 7.0
+        """
+        margins_dict = margins or DEFAULT_MARGINS
+
+        # Calculate available width for cells
+        available_width = (
+            fig_width
+            - margins_dict["left"]
+            - margins_dict["right"]
+            - hgap * (cols - 1)
+        )
+
+        if available_width <= 0:
+            raise ValueError(
+                f"Figure width {fig_width} is too small for margins and gaps"
+            )
+
+        # Calculate column widths
+        if col_ratios is None:
+            col_widths = tuple([available_width / cols] * cols)
+        else:
+            if len(col_ratios) != cols:
+                raise ValueError(
+                    f"col_ratios length ({len(col_ratios)}) must match cols ({cols})"
+                )
+            total_ratio = sum(col_ratios)
+            col_widths = tuple(r / total_ratio * available_width for r in col_ratios)
+
+        margins_tuple = tuple(margins_dict.items())
+        return cls(
+            col_widths=col_widths,
+            row_heights=tuple([cell_height] * rows),
+            hgap=hgap,
+            vgap=vgap,
+            margins=margins_tuple,
+        )
+
+    @classmethod
+    def from_height(
+        cls,
+        fig_height: float,
+        rows: int,
+        cols: int,
+        cell_width: float,
+        hgap: float = 0.3,
+        vgap: float = 0.4,
+        margins: Optional[dict[str, float]] = None,
+        row_ratios: Optional[list[float]] = None,
+    ) -> "GridSpec":
+        """
+        Create grid with fixed figure height, calculating row heights automatically.
+
+        Args:
+            fig_height: Total figure height in inches.
+            rows: Number of rows.
+            cols: Number of columns.
+            cell_width: Width of each cell in inches.
+            hgap: Horizontal gap between columns in inches.
+            vgap: Vertical gap between rows in inches.
+            margins: Dict with left, right, top, bottom margins.
+            row_ratios: Relative row heights. If None, rows are equal.
+
+        Returns:
+            GridSpec with row heights calculated to fit the figure height.
+
+        Example:
+            >>> spec = GridSpec.from_height(5.0, rows=2, cols=3, cell_width=2.0)
+            >>> assert spec.fig_height == 5.0
+        """
+        margins_dict = margins or DEFAULT_MARGINS
+
+        # Calculate available height for cells
+        available_height = (
+            fig_height
+            - margins_dict["top"]
+            - margins_dict["bottom"]
+            - vgap * (rows - 1)
+        )
+
+        if available_height <= 0:
+            raise ValueError(
+                f"Figure height {fig_height} is too small for margins and gaps"
+            )
+
+        # Calculate row heights
+        if row_ratios is None:
+            row_heights = tuple([available_height / rows] * rows)
+        else:
+            if len(row_ratios) != rows:
+                raise ValueError(
+                    f"row_ratios length ({len(row_ratios)}) must match rows ({rows})"
+                )
+            total_ratio = sum(row_ratios)
+            row_heights = tuple(r / total_ratio * available_height for r in row_ratios)
+
+        margins_tuple = tuple(margins_dict.items())
+        return cls(
+            col_widths=tuple([cell_width] * cols),
+            row_heights=row_heights,
+            hgap=hgap,
+            vgap=vgap,
+            margins=margins_tuple,
+        )
+
+    @classmethod
+    def fixed_cells(
+        cls,
+        rows: int,
+        cols: int,
+        cell_width: float,
+        cell_height: float,
+        fig_width: Optional[float] = None,
+        fig_height: Optional[float] = None,
+        hgap: float = 0.3,
+        vgap: float = 0.4,
+        min_left: float = 0.5,
+        min_bottom: float = 0.4,
+        min_right: float = 0.1,
+        min_top: float = 0.1,
+        auto_gaps: bool = False,
+    ) -> "GridSpec":
+        """
+        Create grid with fixed cell sizes and optional fixed figure dimensions.
+
+        Margins are calculated automatically to fill the remaining space.
+        If auto_gaps=True, gaps are also calculated to distribute space evenly.
+
+        Args:
+            rows: Number of rows.
+            cols: Number of columns.
+            cell_width: Width of each cell in inches.
+            cell_height: Height of each cell in inches.
+            fig_width: Total figure width in inches (optional).
+            fig_height: Total figure height in inches (optional).
+            hgap: Horizontal gap between columns in inches (ignored if auto_gaps=True).
+            vgap: Vertical gap between rows in inches (ignored if auto_gaps=True).
+            min_left: Minimum left margin in inches.
+            min_bottom: Minimum bottom margin in inches.
+            min_right: Minimum right margin in inches.
+            min_top: Minimum top margin in inches.
+            auto_gaps: If True, calculate gaps automatically to distribute
+                      remaining space evenly between cells.
+
+        Returns:
+            GridSpec with fixed cell sizes and calculated margins/gaps.
+
+        Example:
+            >>> # Lock figure to 7 inches wide, cells are 2x2, auto gaps
+            >>> spec = GridSpec.fixed_cells(
+            ...     rows=2, cols=3,
+            ...     cell_width=2.0, cell_height=2.0,
+            ...     fig_width=8.0,
+            ...     auto_gaps=True
+            ... )
+            >>> assert spec.fig_width == 8.0
+            >>> assert spec.col_widths == (2.0, 2.0, 2.0)
+        """
+        if auto_gaps:
+            # Calculate gaps to distribute remaining space evenly
+            if fig_width is not None:
+                cells_width = cols * cell_width
+                remaining_width = fig_width - cells_width - min_left - min_right
+                if remaining_width < 0:
+                    raise ValueError(
+                        f"Figure width {fig_width} is too small for "
+                        f"{cols} cells of width {cell_width}. "
+                        f"Need at least {cells_width + min_left + min_right:.2f} inches."
+                    )
+                # Distribute remaining space: gaps get space, margins stay at minimum
+                if cols > 1:
+                    hgap = remaining_width / (cols - 1)
+                    left = min_left
+                    right = min_right
+                else:
+                    hgap = 0
+                    # Single column: extra space goes to margins
+                    extra = remaining_width
+                    left = min_left + extra * 0.8
+                    right = min_right + extra * 0.2
+            else:
+                left = min_left
+                right = min_right
+
+            if fig_height is not None:
+                cells_height = rows * cell_height
+                remaining_height = fig_height - cells_height - min_top - min_bottom
+                if remaining_height < 0:
+                    raise ValueError(
+                        f"Figure height {fig_height} is too small for "
+                        f"{rows} cells of height {cell_height}. "
+                        f"Need at least {cells_height + min_top + min_bottom:.2f} inches."
+                    )
+                # Distribute remaining space to gaps
+                if rows > 1:
+                    vgap = remaining_height / (rows - 1)
+                    top = min_top
+                    bottom = min_bottom
+                else:
+                    vgap = 0
+                    # Single row: extra space goes to margins
+                    extra = remaining_height
+                    bottom = min_bottom + extra * 0.8
+                    top = min_top + extra * 0.2
+            else:
+                top = min_top
+                bottom = min_bottom
+        else:
+            # Fixed gaps, calculate margins
+            content_width = cols * cell_width + (cols - 1) * hgap
+            content_height = rows * cell_height + (rows - 1) * vgap
+
+            # Calculate margins for width
+            if fig_width is not None:
+                available_h_margin = fig_width - content_width
+                if available_h_margin < min_left + min_right:
+                    raise ValueError(
+                        f"Figure width {fig_width} is too small for "
+                        f"{cols} cells of width {cell_width} with gaps {hgap}. "
+                        f"Need at least {content_width + min_left + min_right:.2f} inches."
+                    )
+                # Distribute extra margin, keeping left larger (for y-axis labels)
+                extra = available_h_margin - (min_left + min_right)
+                left = min_left + extra * 0.8
+                right = min_right + extra * 0.2
+            else:
+                left = min_left
+                right = min_right
+
+            # Calculate margins for height
+            if fig_height is not None:
+                available_v_margin = fig_height - content_height
+                if available_v_margin < min_top + min_bottom:
+                    raise ValueError(
+                        f"Figure height {fig_height} is too small for "
+                        f"{rows} cells of height {cell_height} with gaps {vgap}. "
+                        f"Need at least {content_height + min_top + min_bottom:.2f} inches."
+                    )
+                # Distribute extra margin, keeping bottom larger (for x-axis labels)
+                extra = available_v_margin - (min_top + min_bottom)
+                bottom = min_bottom + extra * 0.8
+                top = min_top + extra * 0.2
+            else:
+                top = min_top
+                bottom = min_bottom
+
+        margins = {"left": left, "right": right, "top": top, "bottom": bottom}
+        margins_tuple = tuple(margins.items())
+
+        return cls(
+            col_widths=tuple([cell_width] * cols),
+            row_heights=tuple([cell_height] * rows),
+            hgap=hgap,
+            vgap=vgap,
+            margins=margins_tuple,
+        )
+
     @property
     def num_rows(self) -> int:
         """Number of rows in the grid."""
@@ -193,6 +575,8 @@ class GridCell:
         colspan: Number of columns to span (default 1).
         axis_type: Type of axis (PLOT or IMAGE).
         name: Optional name for the subplot.
+        sharex: Share x-axis with another cell (by name or index).
+        sharey: Share y-axis with another cell (by name or index).
     """
 
     row: int
@@ -201,6 +585,8 @@ class GridCell:
     colspan: int = 1
     axis_type: AxisType = AxisType.PLOT
     name: Optional[str] = None
+    sharex: Optional[Union[str, int]] = None
+    sharey: Optional[Union[str, int]] = None
 
     def validate(self, spec: GridSpec) -> None:
         """
@@ -355,6 +741,8 @@ class GridLayout:
             colspan=config.get("colspan", 1),
             axis_type=axis_type,
             name=config.get("name"),
+            sharex=config.get("sharex"),
+            sharey=config.get("sharey"),
         )
 
     def _load_yaml(
@@ -447,6 +835,8 @@ class GridLayout:
         colspan: int = 1,
         axis_type: Union[AxisType, str] = AxisType.PLOT,
         name: Optional[str] = None,
+        sharex: Optional[Union[str, int]] = None,
+        sharey: Optional[Union[str, int]] = None,
     ) -> "GridLayout":
         """
         Add a subplot cell to the layout.
@@ -458,6 +848,8 @@ class GridLayout:
             colspan: Number of columns to span.
             axis_type: Type of axis (AxisType.PLOT, AxisType.IMAGE, or string).
             name: Optional name for the subplot.
+            sharex: Share x-axis with another cell (by name or index).
+            sharey: Share y-axis with another cell (by name or index).
 
         Returns:
             Self for method chaining.
@@ -476,6 +868,8 @@ class GridLayout:
             colspan=colspan,
             axis_type=axis_type,
             name=name,
+            sharex=sharex,
+            sharey=sharey,
         )
 
         # Validate bounds
@@ -569,8 +963,8 @@ class GridLayout:
         """
         Expand an IMAGE cell to fill adjacent gap space.
 
-        Expands by half hgap on left/right and half vgap on top/bottom,
-        but respects figure boundaries.
+        Expands by half hgap to the left and half vgap downward (towards
+        where axis labels typically are), but respects figure boundaries.
         """
         left, bottom, width, height = coord
 
@@ -578,17 +972,19 @@ class GridLayout:
         half_hgap = (self._spec.hgap / 2) / fig_width
         half_vgap = (self._spec.vgap / 2) / fig_height
 
-        # Expand left (but not past figure edge)
+        # Expand left only (towards y-axis labels area)
         new_left = max(0.0, left - half_hgap)
+        left_expansion = left - new_left
 
-        # Expand bottom (but not past figure edge)
+        # Expand down only (towards x-axis labels area)
         new_bottom = max(0.0, bottom - half_vgap)
+        bottom_expansion = bottom - new_bottom
 
-        # Expand width (add expansion on both sides, but not past figure edge)
-        new_width = min(1.0 - new_left, width + half_hgap * 2)
+        # Width increases by left expansion only
+        new_width = width + left_expansion
 
-        # Expand height (add expansion on both sides, but not past figure edge)
-        new_height = min(1.0 - new_bottom, height + half_vgap * 2)
+        # Height increases by bottom expansion only
+        new_height = height + bottom_expansion
 
         return (new_left, new_bottom, new_width, new_height)
 
@@ -596,8 +992,67 @@ class GridLayout:
         """Return axis types for each cell in order."""
         return [cell.axis_type for cell in self._cells]
 
+    def get_cell_index(self, ref: Union[str, int]) -> int:
+        """
+        Resolve a cell reference to an index.
+
+        Args:
+            ref: Cell name (string) or index (int).
+
+        Returns:
+            Index of the cell in the cells list.
+
+        Raises:
+            ValueError: If cell reference is invalid.
+        """
+        if isinstance(ref, int):
+            if ref < 0 or ref >= len(self._cells):
+                raise ValueError(
+                    f"Cell index {ref} is out of bounds (0 to {len(self._cells) - 1})"
+                )
+            return ref
+        else:
+            for i, cell in enumerate(self._cells):
+                if cell.name == ref:
+                    return i
+            raise ValueError(f"No cell found with name '{ref}'")
+
+    def get_share_info(self) -> list[tuple[Optional[int], Optional[int]]]:
+        """
+        Get axis sharing information for each cell.
+
+        Returns:
+            List of (sharex_index, sharey_index) tuples for each cell.
+            None values indicate no sharing for that axis.
+        """
+        share_info = []
+        for cell in self._cells:
+            sharex_idx = None
+            sharey_idx = None
+            if cell.sharex is not None:
+                sharex_idx = self.get_cell_index(cell.sharex)
+            if cell.sharey is not None:
+                sharey_idx = self.get_cell_index(cell.sharey)
+            share_info.append((sharex_idx, sharey_idx))
+        return share_info
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary representation."""
+        cells_list = []
+        for cell in self._cells:
+            cell_dict = {
+                "pos": [cell.row, cell.col],
+                "rowspan": cell.rowspan,
+                "colspan": cell.colspan,
+                "axis_type": cell.axis_type.name.lower(),
+                "name": cell.name,
+            }
+            if cell.sharex is not None:
+                cell_dict["sharex"] = cell.sharex
+            if cell.sharey is not None:
+                cell_dict["sharey"] = cell.sharey
+            cells_list.append(cell_dict)
+
         return {
             "grid": {
                 "col_widths": list(self._spec.col_widths),
@@ -606,16 +1061,7 @@ class GridLayout:
                 "vgap": self._spec.vgap,
                 "margins": self._spec.margins_dict,
             },
-            "cells": [
-                {
-                    "pos": [cell.row, cell.col],
-                    "rowspan": cell.rowspan,
-                    "colspan": cell.colspan,
-                    "axis_type": cell.axis_type.name.lower(),
-                    "name": cell.name,
-                }
-                for cell in self._cells
-            ],
+            "cells": cells_list,
         }
 
     def to_yaml(self, yaml_file: Union[str, Path]) -> None:
